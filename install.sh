@@ -20,7 +20,7 @@ NC='\033[0m'
 
 # Variabel Utama
 INSTALL_DIR="/var/www/pterodactyl"
-PANEL_VERSION="2.1.0 (Maximized Stability)
+PANEL_VERSION="2.2.0 (Maximized Stability & Fix Bug)"
 GITHUB_REPO="https://github.com/jackdogle/pterodactyl-addons"
 
 # Header Banner
