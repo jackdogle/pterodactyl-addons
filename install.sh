@@ -245,7 +245,7 @@ configure_database() {
     mysql -u root <<EOF
 ALTER USER 'dogle'@'localhost' IDENTIFIED BY '${DB_ROOT_PASS}';
 DELETE FROM mysql.user WHERE User='';
-DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+DELETE FROM mysql.user WHERE User='dogle' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 DROP DATABASE IF EXISTS test;
 DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%' OR Db= 'dogle';
 FLUSH PRIVILEGES;
@@ -253,9 +253,9 @@ EOF
 
     # Create panel database and user
     mysql -u root -p"${DB_ROOT_PASS}" <<EOF
-CREATE DATABASE IF NOT EXISTS panel;
+CREATE DATABASE IF NOT EXISTS dogle;
 CREATE USER IF NOT EXISTS 'dogle'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}';
-GRANT ALL PRIVILEGES ON panel.* TO 'dogle'@'127.0.0.1' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON dogle.* TO 'dogle'@'127.0.0.1' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 EOF
 
