@@ -46,7 +46,7 @@ A fully customized Pterodactyl Panel with game-specific addons, admin tools, and
 ### One-Command Installation
 
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/MuLTiAcidi/pterodactyl-addons/main/install.sh)
+bash <(curl -s https://raw.githubusercontent.com/jackdogle/pterodactyl-addons/main/install.sh)
 ```
 
 The script will:
