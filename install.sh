@@ -26,7 +26,7 @@ WHITE='\033[1;37m'
 NC='\033[0m' # No Color
 
 # Variables
-GITHUB_URL="https://github.com/MuLTiAcidi/pterodactyl-addons"
+GITHUB_URL="https://github.com/jackdogle/pterodactyl-addons"
 PANEL_VERSION="1.0.0"
 INSTALL_DIR="/var/www/pterodactyl"
 
@@ -135,11 +135,11 @@ get_user_input() {
 
     # Admin Password
     echo ""
-    echo -e "${YELLOW}Enter admin password (min 8 characters):${NC}"
+    echo -e "${YELLOW}Enter admin password (min 5 characters):${NC}"
     read -s -p "> " ADMIN_PASS
     echo ""
-    while [[ ${#ADMIN_PASS} -lt 8 ]]; do
-        echo -e "${RED}Password must be at least 8 characters!${NC}"
+    while [[ ${#ADMIN_PASS} -lt 5 ]]; do
+        echo -e "${RED}Password must be at least 5 characters!${NC}"
         read -s -p "> " ADMIN_PASS
         echo ""
     done
@@ -166,7 +166,7 @@ get_user_input() {
 
     # Timezone
     echo ""
-    echo -e "${YELLOW}Enter your timezone (e.g., Europe/London, America/New_York):${NC}"
+    echo -e "${YELLOW}Enter your timezone (e.g., Europe/London, America/New_York, Asia/Jakarta):${NC}"
     read -p "> " TIMEZONE
     TIMEZONE=${TIMEZONE:-"UTC"}
 
@@ -214,7 +214,7 @@ install_dependencies() {
     curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
 
     # Add Node.js repository
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 
     apt update -y
 
@@ -243,19 +243,19 @@ configure_database() {
 
     # Secure MariaDB
     mysql -u root <<EOF
-ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_ROOT_PASS}';
+ALTER USER 'dogle'@'localhost' IDENTIFIED BY '${DB_ROOT_PASS}';
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 DROP DATABASE IF EXISTS test;
-DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%' OR Db= 'dogle';
 FLUSH PRIVILEGES;
 EOF
 
     # Create panel database and user
     mysql -u root -p"${DB_ROOT_PASS}" <<EOF
 CREATE DATABASE IF NOT EXISTS panel;
-CREATE USER IF NOT EXISTS 'pterodactyl'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}';
-GRANT ALL PRIVILEGES ON panel.* TO 'pterodactyl'@'127.0.0.1' WITH GRANT OPTION;
+CREATE USER IF NOT EXISTS 'dogle'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}';
+GRANT ALL PRIVILEGES ON panel.* TO 'dogle'@'127.0.0.1' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 EOF
 
@@ -319,8 +319,8 @@ configure_panel() {
     php artisan p:environment:database \
         --host=127.0.0.1 \
         --port=3306 \
-        --database=panel \
-        --username=pterodactyl \
+        --database=dogle \
+        --username=dogle \
         --password="$DB_PASS"
 
     # Update panel name in .env
@@ -343,8 +343,8 @@ setup_database_tables() {
     php artisan p:user:make \
         --email="$ADMIN_EMAIL" \
         --username="$ADMIN_USER" \
-        --name-first="Admin" \
-        --name-last="User" \
+        --name-first="dogle" \
+        --name-last="dogle" \
         --password="$ADMIN_PASS" \
         --admin=1
 
