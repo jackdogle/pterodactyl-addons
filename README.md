@@ -102,7 +102,7 @@ chown -R www-data:www-data /var/www/pterodactyl/*
 After installing the panel, you need Wings on your game server nodes:
 
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/MuLTiAcidi/pterodactyl-addons/main/wings-install.sh)
+bash <(curl -s https://raw.githubusercontent.com/jackdogle/pterodactyl-addons/main/wings-install.sh)
 ```
 
 Or use the official Pterodactyl Wings installer.
