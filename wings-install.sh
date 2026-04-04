@@ -70,7 +70,7 @@ Requires=docker.service
 PartOf=docker.service
 
 [Service]
-User=root
+User=dogle
 WorkingDirectory=/etc/pterodactyl
 LimitNOFILE=4096
 PIDFile=/var/run/wings/daemon.pid
