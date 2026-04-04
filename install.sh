@@ -243,9 +243,9 @@ configure_database() {
 
     # Secure MariaDB
     mysql -u root <<EOF
-ALTER USER 'dogle'@'localhost' IDENTIFIED BY '${DB_ROOT_PASS}';
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_ROOT_PASS}';
 DELETE FROM mysql.user WHERE User='';
-DELETE FROM mysql.user WHERE User='dogle' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 DROP DATABASE IF EXISTS test;
 DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%' OR Db= 'dogle';
 FLUSH PRIVILEGES;
