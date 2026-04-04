@@ -254,7 +254,7 @@ EOF
     # Create panel database and user
     mysql -u root -p"${DB_ROOT_PASS}" <<EOF
 CREATE DATABASE IF NOT EXISTS dogle;
-CREATE USER IF NOT EXISTS 'dogle'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}';
+CREATE USER IF NOT EXISTS 'dogle'@'127.0.0.1' IDENTIFIED BY '${DB_ROOT_PASS}';
 GRANT ALL PRIVILEGES ON dogle.* TO 'dogle'@'127.0.0.1' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 EOF
@@ -321,7 +321,7 @@ configure_panel() {
         --port=3306 \
         --database=dogle \
         --username=dogle \
-        --password="$DB_PASS"
+        --password="$DB_ROOT_PASS"
 
     # Update panel name in .env
     sed -i "s/APP_NAME=.*/APP_NAME=\"$PANEL_NAME\"/" .env
