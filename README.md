@@ -80,7 +80,7 @@ If you prefer manual installation:
 ```bash
 # 1. Download the panel
 cd /var/www
-curl -Lo pterodactyl.tar.gz https://github.com/MuLTiAcidi/pterodactyl-addons/releases/latest/download/pterodactyl-addons-panel.tar.gz
+curl -Lo pterodactyl.tar.gz https://github.com/jackdogle/pterodactyl-addons/releases/latest/download/pterodactyl-addons-panel.tar.gz
 mkdir pterodactyl && tar -xzf pterodactyl.tar.gz -C pterodactyl
 cd pterodactyl
 
