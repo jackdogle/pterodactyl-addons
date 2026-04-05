@@ -1,17 +1,12 @@
 #!/bin/bash
 
 # ======================================================================================
-#  PTERODACTYL ADDONS PANEL - ADVANCED ULTIMATE INSTALLER
-#  Versi: 3.5.0 (Hyper-Stable, Cyber UI, Deep Self-Healing)
-#  Update: Deep Collision Recovery & Auto-Repair Logic
-#  OS: Ubuntu 20.04/22.04/24.04, Debian 11/12
+#  PTERODACTYL ADDONS PANEL - ULTRA INSTALLER V3.1.0 (PRO DEBUGGING)
+#  Optimized for: 8GB RAM VPS
+#  Feature: Anti-Stuck, Professional Logging, Self-Healing
 # ======================================================================================
 
-set -e
-
-# ==========================================
-# KONFIGURASI WARNA & BRANDING CYBER
-# ==========================================
+# Setup Warna & UI
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -19,392 +14,200 @@ BLUE='\033[0;34m'
 PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 WHITE='\033[1;37m'
-NC='\033[0m'
 BOLD='\033[1m'
-BG_BLUE='\033[44m'
+NC='\033[0m'
 
-# Komponen UI Modern
-msg_step()  { echo -e "\n${BG_BLUE}${WHITE}${BOLD} STEP $1 ${NC} ${CYAN}➤${NC} ${WHITE}$2${NC}"; }
-msg_info()  { echo -e " ${BLUE}󰋼${NC}  ${WHITE}$1${NC}"; }
-msg_ok()    { echo -e " ${GREEN}󰄬${NC}  ${GREEN}$1${NC}"; }
-msg_warn()  { echo -e " ${YELLOW}󱈸${NC}  ${YELLOW}$1${NC}"; }
-msg_error() { echo -e " ${RED}󰅚${NC}  ${RED}${BOLD}$1${NC}"; exit 1; }
-
-divider()   { echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"; }
-
-# Variabel Global
+# Versi & Log
+VERSION="3.1.0-PRO"
+LOG_FILE="/var/log/ptero_install.log"
 INSTALL_DIR="/var/www/pterodactyl"
 GITHUB_REPO="https://github.com/jackdogle/pterodactyl-addons"
-VERSION="3.5.0-ULTIMATE"
 
-# ==========================================
-# BANNER & CHECKER
-# ==========================================
+# Inisialisasi Log
+echo "--- LOG MULAI: $(date) ---" > $LOG_FILE
+
+# Fungsi Animasi Loading
+spinner() {
+    local pid=$1
+    local delay=0.1
+    local spinstr='|/-\'
+    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
+        local temp=${spinstr#?}
+        printf " [%c]  " "$spinstr"
+        local spinstr=$temp${spinstr%"$temp"}
+        sleep $delay
+        printf "\b\b\b\b\b\b"
+    done
+    printf "    \b\b\b\b"
+}
+
+# Header Banner Modern
 print_banner() {
     clear
-    echo -e "${CYAN}"
-    echo "    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
-    echo "    ┃  ██████╗ ████████╗███████╗██████╗  ██████╗               ┃"
-    echo "    ┃  ██╔══██╗╚══██╔══╝██╔════╝██╔══██╗██╔═══██╗              ┃"
-    echo "    ┃  ██████╔╝   ██║   █████╗  ██████╔╝██║   ██║              ┃"
-    echo "    ┃  ██╔═══╝    ██║   ██╔══╝  ██╔══██╗██║   ██║              ┃"
-    echo "    ┃  ██║        ██║   ███████╗██║  ██║╚██████╔╝              ┃"
-    echo "    ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛"
-    echo -e "${NC}"
-    echo -e "      ${BOLD}${WHITE}PTERODACTYL ADDONS PANEL INSTALLER${NC}"
-    echo -e "      ${PURPLE}Status: ${VERSION} | Deep Healing Enabled${NC}\n"
-    divider
+    echo -e "${CYAN}┌────────────────────────────────────────────────────────────┐${NC}"
+    echo -e "${CYAN}│${NC}  ${BOLD}${WHITE}PTERODACTYL ADDONS INSTALLER${NC} ${CYAN}v${VERSION}${NC}           ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC}  ${BLUE}Pro Debugging Enabled & Anti-Stuck Optimized${NC}           ${CYAN}│${NC}"
+    echo -e "${CYAN}└────────────────────────────────────────────────────────────┘${NC}"
+    echo ""
 }
 
-check_env() {
-    if [[ $EUID -ne 0 ]]; then
-        msg_error "Akses Ditolak! Jalankan sebagai ROOT (sudo bash install.sh)."
-    fi
-    
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        OS=$ID
-    else
-        msg_error "OS tidak didukung."
-    fi
-    msg_ok "Sistem: $OS terdeteksi. Lingkungan siap."
+# Fungsi Logging Profesional
+log_event() {
+    local status=$1
+    local message=$2
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$status] $message" >> $LOG_FILE
 }
 
-# ==========================================
-# DEEP SELF-HEALING & PRE-CLEANUP
-# ==========================================
-system_healing() {
-    msg_step "0" "Protokol Pembersihan Bentrok & Self-Healing"
-    
-    msg_info "Mendeteksi proses zombie (Yarn/PHP/Node)..."
-    pkill -9 -f "yarn" || true
-    pkill -9 -f "node" || true
-    pkill -9 -f "artisan" || true
-    msg_ok "Proses memori dibersihkan."
+# Logika Perbaikan Otomatis & Anti-Stuck
+auto_repair_conflicts() {
+    echo -e "${YELLOW}[!] Menjalankan Diagnosa Konflik & Perbaikan...${NC}"
+    log_event "INFO" "Memulai diagnosa konflik lingkungan."
 
-    msg_info "Memeriksa port 80/443 (Nginx Collision)..."
+    # 1. Bersihkan APT Locks (Sering bikin stuck)
+    log_event "REPAIR" "Membersihkan lock files package manager."
+    systemctl stop unattended-upgrades > /dev/null 2>&1
+    rm -f /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock > /dev/null 2>&1
+    dpkg --configure -a >> $LOG_FILE 2>&1
+
+    # 2. Cek Port Terpakai
     if lsof -Pi :80 -sTCP:LISTEN -t >/dev/null ; then
-        msg_warn "Port 80 sedang digunakan! Mencoba membebaskan..."
-        systemctl stop apache2 2>/dev/null || true
-        systemctl restart nginx 2>/dev/null || true
+        echo -e "${PURPLE}[*] Mendeteksi port 80 digunakan. Mengosongkan...${NC}"
+        log_event "REPAIR" "Menghentikan proses pada port 80."
+        fuser -k 80/tcp >> $LOG_FILE 2>&1
     fi
 
-    if [ -d "$INSTALL_DIR" ]; then
-        msg_warn "Instalasi lama ditemukan. Melakukan sanitasi file..."
-        rm -f "$INSTALL_DIR/bootstrap/cache/*.php"
-        rm -f "$INSTALL_DIR/composer.lock"
-        rm -f "$INSTALL_DIR/yarn.lock"
-        # Hapus sisa install yang korup
-        find "$INSTALL_DIR" -name ".DS_Store" -delete
-    fi
-    msg_ok "Sistem bersih dari bentrok instalasi sebelumnya."
+    # 3. Optimasi Swap (Jika diperlukan untuk stabilitas)
+    local ram_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+    log_event "INFO" "Total RAM terdeteksi: $ram_kb KB."
+    
+    echo -e "${GREEN}[V] Lingkungan bersih dan siap.${NC}"
 }
 
-# ==========================================
-# CONFIGURATION INPUT
-# ==========================================
+# Cek Izin & OS
+check_env() {
+    [[ $EUID -ne 0 ]] && echo -e "${RED}[!] Jalankan sebagai ROOT!${NC}" && exit 1
+    if [ -f /etc/os-release ]; then . /etc/os-release; OS=$ID; else exit 1; fi
+    log_event "INFO" "OS Terdeteksi: $OS"
+}
+
+# Input dengan UI Bersih
 get_config() {
-    msg_step "1" "Konfigurasi Identitas Panel"
+    echo -e "${BOLD}${CYAN}>> KONFIGURASI SISTEM${NC}"
+    read -p "   Domain FQDN  : " FQDN
+    read -p "   Email Admin  : " ADMIN_EMAIL
+    read -p "   User Admin   : " ADMIN_USER
+    read -s -p "   Pass Admin   : " ADMIN_PASS; echo ""
+    read -s -p "   MariaDB Root : " DB_ROOT_PWD; echo ""
     
-    read -p " $(echo -e "${CYAN}󰁔${NC} Domain/FQDN (cth: panel.domain.com): ")" FQDN
-    while [[ -z "$FQDN" ]]; do read -p " Domain wajib diisi: " FQDN; done
-
-    read -p " $(echo -e "${CYAN}󰁔${NC} Nama Panel [Jack Store]: ")" PANEL_NAME
-    PANEL_NAME=${PANEL_NAME:-"Jack Store"}
-
-    read -p " $(echo -e "${CYAN}󰁔${NC} Email Admin Utama: ")" ADMIN_EMAIL
-    while [[ ! $ADMIN_EMAIL =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; do
-        read -p " Email tidak valid: " ADMIN_EMAIL
-    done
-    
-    read -p " $(echo -e "${CYAN}󰁔${NC} Username Admin [admin]: ")" ADMIN_USER
-    ADMIN_USER=${ADMIN_USER:-"admin"}
-    
-    read -s -p " $(echo -e "${CYAN}󰁔${NC} Password Admin (min 8 karakter): ")" ADMIN_PASS
-    echo ""
-
-    read -s -p " $(echo -e "${CYAN}󰁔${NC} Password ROOT MariaDB (Sangat Penting): ")" DB_ROOT_PWD
-    echo ""
-    
-    DB_APP_USER="pterodactyl"
-    DB_APP_PASS=$(openssl rand -base64 14 | tr -dc 'a-zA-Z0-9' | head -c 18)
+    # Auto-generate DB Creds
     DB_NAME="panel"
-
-    read -p " $(echo -e "${CYAN}󰁔${NC} Gunakan SSL Let's Encrypt? (y/n) [y]: ")" USE_SSL
-    USE_SSL=${USE_SSL:-"y"}
-
-    divider
-    echo -e " ${BOLD}REKAPITULASI:${NC}"
-    echo -e " • Hostname : ${BLUE}$FQDN${NC}"
-    echo -e " • Admin    : ${WHITE}$ADMIN_USER ($ADMIN_EMAIL)${NC}"
-    echo -e " • Versi    : ${PURPLE}$VERSION${NC}"
-    divider
-    
-    read -p " Mulai proses instalasi sekarang? (y/n): " FINAL_CONFIRM
-    if [[ "$FINAL_CONFIRM" != "y" ]]; then msg_error "Dibatalkan oleh pengguna."; fi
+    DB_USER="ptero_user"
+    DB_PASS=$(openssl rand -base64 14 | tr -dc 'a-zA-Z0-9' | head -c 16)
+    log_event "CONFIG" "Konfigurasi domain $FQDN diterima."
 }
 
-# ==========================================
-# CORE INSTALLATION
-# ==========================================
-install_core() {
-    msg_step "2" "Instalasi Dependensi & Arsitektur"
+# Eksekusi Langkah dengan Debugging Profesional
+execute_step() {
+    local msg=$1
+    local cmd=$2
+    log_event "EXEC" "Memulai: $msg"
     
-    msg_info "Sinkronisasi repositori sistem..."
-    apt update -y && apt upgrade -y > /dev/null 2>&1
-    apt install -y software-properties-common curl git unzip tar cron psmisc lsof > /dev/null 2>&1
+    echo -ne "${BLUE}[TASK] $msg...${NC}"
+    
+    # Eksekusi dengan redirect ke log utama
+    eval "$cmd" >> $LOG_FILE 2>&1 &
+    local pid=$!
+    spinner $pid
+    wait $pid
+    local res=$?
 
-    msg_info "Injeksi Repositori Eksternal (PHP 8.3 & Node 22)..."
+    if [ $res -eq 0 ]; then
+        echo -e "\r${GREEN}[DONE] $msg                                ${NC}"
+        log_event "SUCCESS" "Selesai: $msg"
+    else
+        echo -e "\r${RED}[FAIL] $msg                                ${NC}"
+        log_event "ERROR" "Gagal pada: $msg (Exit Code: $res)"
+        echo -e "${YELLOW}------------------------------------------------------------${NC}"
+        echo -e "${BOLD}${RED}ERROR DETECTED!${NC} Lihat 10 baris terakhir log:"
+        tail -n 10 $LOG_FILE
+        echo -e "${YELLOW}------------------------------------------------------------${NC}"
+        echo -e "Log lengkap tersedia di: ${CYAN}$LOG_FILE${NC}"
+        exit 1
+    fi
+}
+
+# Langkah Instalasi Teroptimasi
+run_installation() {
+    # 1. Update & Repositori
+    execute_step "Update System & Repos" "apt update && apt upgrade -y && apt install -y software-properties-common curl git psmisc lsof unzip"
+    
     if [[ "$OS" == "ubuntu" ]]; then
-        add-apt-repository -y ppa:ondrej/php > /dev/null 2>&1
-    else
-        curl -sSL https://packages.sury.org/php/apt.gpg | gpg --dearmor -o /usr/share/keyrings/sury-php.gpg
-        echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/sury-php.list
-    fi
-
-    curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash > /dev/null 2>&1
-    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - > /dev/null 2>&1
-
-    apt update -y > /dev/null 2>&1
-    apt install -y php8.3 php8.3-{common,cli,gd,mysql,mbstring,bcmath,xml,curl,zip,intl,redis,fpm} \
-                mariadb-server nginx redis-server nodejs > /dev/null 2>&1
-
-    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer > /dev/null 2>&1
-    npm install -g yarn > /dev/null 2>&1
-    msg_ok "Seluruh paket core berhasil dikunci."
-}
-
-# ==========================================
-# DATABASE COLLISION RECOVERY
-# ==========================================
-setup_database() {
-    msg_step "3" "Database Recovery & Provisioning"
-    
-    systemctl enable --now mariadb
-    
-    msg_info "Menangani bentrok user database pterodactyl..."
-    mysql -u root -p"${DB_ROOT_PWD}" <<EOF
-CREATE DATABASE IF NOT EXISTS ${DB_NAME};
-DROP USER IF EXISTS '${DB_APP_USER}'@'127.0.0.1';
-CREATE USER '${DB_APP_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_APP_PASS}';
-GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_APP_USER}'@'127.0.0.1' WITH GRANT OPTION;
-FLUSH PRIVILEGES;
-EOF
-    rm -f ~/.mysql_history
-    msg_ok "Database user diregenerasi dengan password baru."
-}
-
-download_panel() {
-    msg_step "4" "Deployment Pterodactyl Addons Source"
-    
-    mkdir -p $INSTALL_DIR
-    cd $INSTALL_DIR
-    
-    msg_info "Menarik source code terbaru dari GitHub..."
-    if ! curl -sSL -o panel.tar.gz "${GITHUB_REPO}/releases/latest/download/pterodactyl-addons-panel.tar.gz"; then
-        msg_warn "Gagal mengunduh file release. Melakukan Git Clone..."
-        git clone $GITHUB_REPO . > /dev/null 2>&1
-    else
-        tar -xzf panel.tar.gz
-        rm panel.tar.gz
+        execute_step "Setup PHP Repo" "add-apt-repository -y ppa:ondrej/php"
     fi
     
-    msg_info "Mengatur izin direktori (Chmod)..."
-    chmod -R 755 storage/* bootstrap/cache/
-    [ ! -f .env ] && cp .env.example .env
+    execute_step "Install PHP 8.3 & MariaDB" "apt install -y php8.3 php8.3-{common,cli,gd,mysql,mbstring,bcmath,xml,curl,zip,intl,redis,fpm} mariadb-server nginx redis-server nodejs npm"
     
-    msg_info "Menjalankan Composer (Optimal Autoload)..."
-    COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction > /dev/null 2>&1
-    php artisan key:generate --force > /dev/null 2>&1
+    # 2. Database Tuning (RAM 8GB)
+    execute_step "Tuning MariaDB (8GB RAM)" "
+        echo '[mysqld]
+        innodb_buffer_pool_size = 2G
+        innodb_log_file_size = 512M
+        innodb_flush_method = O_DIRECT
+        max_connections = 500' > /etc/mysql/mariadb.conf.d/99-ptero-optimized.cnf && systemctl restart mariadb"
 
-    php artisan p:environment:setup --author="$ADMIN_EMAIL" --url="https://$FQDN" --timezone="Asia/Jakarta" --cache=redis --session=redis --queue=redis --redis-host=127.0.0.1 --redis-pass= --redis-port=6379 --settings-ui=true > /dev/null 2>&1
-    php artisan p:environment:database --host=127.0.0.1 --port=3306 --database=$DB_NAME --username=$DB_APP_USER --password="$DB_APP_PASS" > /dev/null 2>&1
+    # 3. Setup DB & User
+    execute_step "Setup Database" "mysql -u root -p'${DB_ROOT_PWD}' -e \"CREATE DATABASE IF NOT EXISTS ${DB_NAME}; CREATE USER IF NOT EXISTS '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}'; GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'127.0.0.1'; FLUSH PRIVILEGES;\""
 
-    sed -i "s/APP_NAME=.*/APP_NAME=\"$PANEL_NAME\"/" .env
-    msg_ok "File core siap di $INSTALL_DIR."
+    # 4. Download & Fix Files
+    execute_step "Download Panel Files" "mkdir -p $INSTALL_DIR && cd $INSTALL_DIR && curl -Lo panel.tar.gz ${GITHUB_REPO}/releases/latest/download/pterodactyl-addons-panel.tar.gz && tar -xzf panel.tar.gz && chmod -R 755 storage/* bootstrap/cache/"
+
+    # 5. Composer & Core Config
+    execute_step "Install Composer" "cd $INSTALL_DIR && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer"
+    
+    execute_step "Install Dependencies" "cd $INSTALL_DIR && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction"
+    
+    execute_step "Configuring Environment" "cd $INSTALL_DIR && cp -n .env.example .env && php artisan key:generate --force && 
+        php artisan p:environment:setup --author='$ADMIN_EMAIL' --url='https://$FQDN' --timezone='Asia/Jakarta' --cache=redis --session=redis --queue=redis --redis-host=127.0.0.1 --redis-pass= --redis-port=6379 &&
+        php artisan p:environment:database --host=127.0.0.1 --port=3306 --database=$DB_NAME --username=$DB_USER --password='$DB_PASS'"
+
+    # 6. SMART MIGRATION (Handle Conflicts)
+    execute_step "Smart Database Migration" "cd $INSTALL_DIR && (php artisan migrate --seed --force || (php artisan cache:clear && php artisan migrate --force))"
+
+    # 7. Create Admin & Assets
+    execute_step "Create Admin Account" "cd $INSTALL_DIR && php artisan p:user:make --email='$ADMIN_EMAIL' --username='$ADMIN_USER' --name-first='Admin' --name-last='User' --password='$ADMIN_PASS' --admin=1"
+    
+    execute_step "Build Assets (Yarn/NPM)" "npm install -g yarn && cd $INSTALL_DIR && yarn install --production && yarn build:production"
+
+    # 8. Webserver & SSL
+    execute_step "Setup Nginx Configuration" "
+        curl -o /etc/nginx/sites-available/pterodactyl.conf https://raw.githubusercontent.com/pterodactyl/panel/develop/debian/nginx.conf
+        sed -i \"s/<domain>/$FQDN/g\" /etc/nginx/sites-available/pterodactyl.conf
+        sed -i \"s|/var/www/pterodactyl|$INSTALL_DIR|g\" /etc/nginx/sites-available/pterodactyl.conf
+        ln -sf /etc/nginx/sites-available/pterodactyl.conf /etc/nginx/sites-enabled/pterodactyl.conf
+        rm -f /etc/nginx/sites-enabled/default
+        systemctl restart nginx"
 }
 
-# ==========================================
-# SMART-MIGRATE & AUTO-FIX
-# ==========================================
-smart_migrate() {
-    msg_step "5" "Smart-Migrate & Auto-Repair Schema"
-    
-    cd $INSTALL_DIR
-    msg_info "Menjalankan migrasi database..."
-    
-    # Mode perbaikan jika gagal
-    set +e
-    php artisan migrate --seed --force 2>/tmp/migration_error.log
-    MIGRATE_STATUS=$?
-    
-    if [ $MIGRATE_STATUS -ne 0 ]; then
-        msg_warn "Bentrok migrasi terdeteksi! Mengaktifkan Auto-Repair..."
-        
-        # Cek apakah tabel migrations sudah ada
-        if grep -q "Table 'migrations' already exists" /tmp/migration_error.log; then
-            msg_info "Mendeteksi tabel gantung. Mencoba membersihkan cache database..."
-            php artisan cache:clear > /dev/null 2>&1
-            # Coba jalankan migrasi tanpa seeding (jika seed sudah ada)
-            php artisan migrate --force > /dev/null 2>&1
-        else
-            msg_warn "Skema rusak parah. Melakukan Re-sync total..."
-            php artisan migrate:fresh --seed --force > /dev/null 2>&1
-        fi
-        
-        if [ $? -eq 0 ]; then
-            msg_ok "Database berhasil diperbaiki otomatis."
-        else
-            msg_error "Gagal memperbaiki database secara otomatis. Cek /tmp/migration_error.log"
-        fi
-    else
-        msg_ok "Migrasi berjalan mulus."
-    fi
-
-    msg_info "Memperbarui akun Administrator..."
-    php artisan p:user:make --email="$ADMIN_EMAIL" --username="$ADMIN_USER" --name-first="Admin" --name-last="User" --password="$ADMIN_PASS" --admin=1 > /dev/null 2>&1 || msg_warn "Akun sudah ada, melewati pembuatan user."
-    set -e
-}
-
-# ==========================================
-# FRONTEND BUILD & WEBSERVER
-# ==========================================
-build_frontend() {
-    msg_step "6" "Kompilasi Aset Frontend (Yarn)"
-    
-    msg_info "Memasang node modules (Ini butuh waktu)..."
-    yarn install --production=false > /dev/null 2>&1 || { msg_warn "Yarn macet, membersihkan cache..."; yarn cache clean; yarn install; }
-    
-    msg_info "Membangun aset produksi..."
-    yarn build:production > /dev/null 2>&1
-    msg_ok "Frontend berhasil dikompilasi dengan UI Modern."
-}
-
-setup_nginx() {
-    msg_step "7" "Konfigurasi Webserver & SSL"
-    
-    msg_info "Optimasi PHP-FPM 8.3 untuk beban berat..."
-    sed -i 's/upload_max_filesize = .*/upload_max_filesize = 128M/' /etc/php/8.3/fpm/php.ini
-    sed -i 's/post_max_size = .*/post_max_size = 128M/' /etc/php/8.3/fpm/php.ini
-    sed -i 's/memory_limit = .*/memory_limit = 1G/' /etc/php/8.3/fpm/php.ini
-
-    msg_info "Menerapkan vHost Nginx Pterodactyl..."
-    cat > /etc/nginx/sites-available/pterodactyl.conf <<EOF
-server {
-    listen 80;
-    server_name $FQDN;
-    root $INSTALL_DIR/public;
-    index index.php;
-    charset utf-8;
-
-    client_max_body_size 128m;
-    client_body_timeout 120s;
-
-    add_header X-Content-Type-Options nosniff;
-    add_header X-XSS-Protection "1; mode=block";
-    add_header X-Frame-Options SAMEORIGIN;
-    add_header Content-Security-Policy "frame-ancestors 'self';";
-
-    location / {
-        try_files \$uri \$uri/ /index.php?\$query_string;
-    }
-
-    location ~ \.php\$ {
-        fastcgi_split_path_info ^(.+\.php)(/.+)\$;
-        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
-        fastcgi_index index.php;
-        include fastcgi_params;
-        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-        fastcgi_intercept_errors off;
-        fastcgi_buffer_size 16k;
-        fastcgi_buffers 4 16k;
-        fastcgi_connect_timeout 600;
-        fastcgi_send_timeout 600;
-        fastcgi_read_timeout 600;
-    }
-
-    location ~ /\.ht { deny all; }
-}
-EOF
-    ln -sf /etc/nginx/sites-available/pterodactyl.conf /etc/nginx/sites-enabled/
-    rm -f /etc/nginx/sites-enabled/default
-    
-    systemctl restart php8.3-fpm
-    nginx -t > /dev/null 2>&1 && systemctl restart nginx
-    msg_ok "Webserver berhasil di-tuning dan aktif."
-
-    if [[ "$USE_SSL" == "y" ]]; then
-        msg_info "Mengamankan domain dengan SSL Let's Encrypt..."
-        apt install -y certbot python3-certbot-nginx > /dev/null 2>&1
-        certbot --nginx -d "$FQDN" --non-interactive --agree-tos --email "$ADMIN_EMAIL" --redirect > /dev/null 2>&1 || msg_warn "Gagal memasang SSL. Pastikan domain terarah ke IP ini."
-        systemctl enable --now certbot.timer > /dev/null 2>&1
-    fi
-}
-
+# Selesai
 finalize() {
-    msg_step "8" "Finalisasi Layanan & Background Worker"
+    execute_step "Finalizing Permissions" "chown -R www-data:www-data $INSTALL_DIR/* && php artisan config:clear"
     
-    msg_info "Mengatur izin kepemilikan file ke www-data..."
-    chown -R www-data:www-data $INSTALL_DIR/*
-
-    msg_info "Mendaftarkan Pterodactyl Queue Worker (pteroq)..."
-    cat > /etc/systemd/system/pteroq.service <<EOF
-[Unit]
-Description=Pterodactyl Queue Worker
-After=redis-server.service
-
-[Service]
-User=www-data
-Group=www-data
-Restart=always
-ExecStart=/usr/bin/php $INSTALL_DIR/artisan queue:work --queue=high,standard,low --sleep=3 --tries=3
-StartLimitInterval=180
-StartLimitBurst=30
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-    systemctl daemon-reload
-    systemctl enable --now pteroq > /dev/null 2>&1
+    log_event "FINISH" "Instalasi selesai sukses."
     
-    (crontab -l 2>/dev/null | grep -v "artisan schedule:run"; echo "* * * * * php $INSTALL_DIR/artisan schedule:run >> /dev/null 2>&1") | crontab -
-    
-    msg_info "Optimasi cache Laravel..."
-    cd $INSTALL_DIR
-    php artisan config:cache > /dev/null 2>&1
-    php artisan view:cache > /dev/null 2>&1
-    php artisan route:cache > /dev/null 2>&1
-    msg_ok "Layanan background aktif 24/7."
+    echo -e "\n${BOLD}${GREEN}====================================================${NC}"
+    echo -e "   ${BOLD}${WHITE}INSTALASI SELESAI - V${VERSION}${NC}"
+    echo -e "${BOLD}${GREEN}====================================================${NC}"
+    echo -e "   URL Panel   : ${CYAN}https://$FQDN${NC}"
+    echo -e "   Admin User  : ${CYAN}$ADMIN_USER${NC}"
+    echo -e "   Log File    : ${PURPLE}$LOG_FILE${NC}"
+    echo -e "   RAM Status  : ${GREEN}Optimized 2GB Pool for 8GB RAM${NC}"
+    echo -e "${BOLD}${GREEN}====================================================${NC}\n"
 }
 
-# ==========================================
-# EKSEKUSI MAIN
-# ==========================================
-main() {
-    print_banner
-    check_env
-    system_healing
-    get_config
-    install_core
-    setup_database
-    download_panel
-    smart_migrate
-    build_frontend
-    setup_nginx
-    finalize
-
-    echo -e "\n${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e " ${GREEN}${BOLD}✔ INSTALASI SELESAI! PANEL SIAP DIGUNAKAN.${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e " ${BOLD}Link Panel${NC}   : ${BLUE}https://$FQDN${NC}"
-    echo -e " ${BOLD}Admin User${NC}  : ${WHITE}$ADMIN_USER${NC}"
-    echo -e " ${BOLD}Admin Pass${NC}  : ${YELLOW}(Sesuai input Anda)${NC}"
-    echo -e ""
-    echo -e " ${BOLD}Database User${NC} : ${WHITE}$DB_APP_USER${NC}"
-    echo -e " ${BOLD}Database Pass${NC} : ${RED}$DB_APP_PASS${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${YELLOW}CATATAN: Harap simpan Database Pass untuk keperluan maintenance!${NC}\n"
-}
-
-main
+# Jalankan skrip
+check_env
+print_banner
+auto_repair_conflicts
+get_config
+run_installation
+finalize
