@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ======================================================================================
-#  PTERODACTYL ADDONS PANEL - ULTRA INSTALLER V3.2.0 (ENTERPRISE DEBUGGING)
+#  PTERODACTYL ADDONS PANEL - ULTRA INSTALLER V3.2.1 (FIX BROKEN PACKAGES)
 #  Optimized for: 8GB RAM VPS
 #  Feature: Anti-Stuck, Advanced Logging, Self-Healing, High-Performance Tuning
 # ======================================================================================
@@ -18,7 +18,7 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 # Versi & Log
-VERSION="3.2.0-PRO"
+VERSION="3.2.1-PRO"
 LOG_FILE="/var/log/ptero_install.log"
 INSTALL_DIR="/var/www/pterodactyl"
 GITHUB_REPO="https://github.com/jackdogle/pterodactyl-addons"
@@ -52,7 +52,7 @@ print_banner() {
     echo -e "${CYAN}│${NC}  ${BOLD}${WHITE}PTERODACTYL ADDONS INSTALLER${NC} ${CYAN}v${VERSION}${NC}           ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC}  ${BLUE}Professional Enterprise Debugging & Anti-Stuck${NC}         ${CYAN}│${NC}"
     echo -e "${CYAN}│${NC}  ${PURPLE}Optimized for 8GB RAM High-Performance VPS${NC}             ${CYAN}│${NC}"
-    echo -e "${CYAN}└────────────────────────────────────────────────────────────┘${NC}"
+    echo -e "└────────────────────────────────────────────────────────────┘${NC}"
     echo ""
 }
 
@@ -63,18 +63,25 @@ log_event() {
     echo "[$(date '+%H:%M:%S')] [$status] $message" >> $LOG_FILE
 }
 
-# Diagnosa & Perbaikan Otomatis
+# Diagnosa & Perbaikan Otomatis Mendalam (FIX Broken Packages)
 auto_repair_conflicts() {
-    echo -e "${YELLOW}[!] Menjalankan Diagnosa Sistem & Anti-Stuck...${NC}"
-    log_event "INFO" "Memulai tahap diagnosa."
+    echo -e "${YELLOW}[!] Menjalankan Diagnosa Sistem & Deep Repair...${NC}"
+    log_event "INFO" "Memulai tahap diagnosa mendalam."
 
     # 1. Perbaikan APT & Lock Files
     log_event "REPAIR" "Membersihkan lock files dan konfigurasi dpkg."
     systemctl stop unattended-upgrades > /dev/null 2>&1
     rm -f /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock > /dev/null 2>&1
+    
+    # 2. Force Fix Broken Packages (PENTING)
+    log_event "REPAIR" "Memaksa perbaikan broken packages dan held packages."
+    apt-mark unhold nodejs npm > /dev/null 2>&1
     dpkg --configure -a >> $LOG_FILE 2>&1
+    apt-get install -f -y >> $LOG_FILE 2>&1
+    apt-get autoremove -y >> $LOG_FILE 2>&1
+    apt-get clean >> $LOG_FILE 2>&1
 
-    # 2. Pembersihan Port Bentrok
+    # 3. Pembersihan Port Bentrok
     log_event "REPAIR" "Memeriksa port 80 dan 443."
     for port in 80 443; do
         if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null ; then
@@ -83,7 +90,7 @@ auto_repair_conflicts() {
         fi
     done
 
-    # 3. Validasi Koneksi Internet
+    # 4. Validasi Koneksi Internet
     if ! ping -c 1 google.com > /dev/null 2>&1; then
         echo -e "${RED}[!] Gagal: Tidak ada koneksi internet.${NC}"
         log_event "FATAL" "Koneksi internet terputus."
@@ -147,16 +154,22 @@ execute_step() {
 
 # Core Installation
 run_installation() {
-    # 1. System Prep
-    execute_step "Updating Repositories" "apt update && apt install -y software-properties-common curl git psmisc lsof unzip ca-certificates"
+    # 1. System Prep & NodeSource Fix
+    execute_step "Updating Repositories" "apt-get update && apt-get install -y software-properties-common curl git psmisc lsof unzip ca-certificates"
     
     if [[ "$OS" == "ubuntu" ]]; then
-        execute_step "Adding PHP Repository" "add-apt-repository -y ppa:ondrej/php"
+        execute_step "Setting up PHP & Node Repositories" "
+            add-apt-repository -y ppa:ondrej/php && 
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -"
     fi
     
-    execute_step "Installing PHP 8.3 & Stack" "apt install -y php8.3 php8.3-{common,cli,gd,mysql,mbstring,bcmath,xml,curl,zip,intl,redis,fpm} mariadb-server nginx redis-server nodejs npm"
+    # 2. Forced Installation of Stack (Paling sering stuck di sini)
+    # Kita pisah nodejs untuk memastikan npm tidak bentrok
+    execute_step "Installing MariaDB & Nginx" "apt-get install -y mariadb-server nginx redis-server"
+    execute_step "Installing Nodejs (Nodesource)" "apt-get install -y nodejs"
+    execute_step "Installing PHP 8.3 & Extensions" "apt-get install -y php8.3 php8.3-{common,cli,gd,mysql,mbstring,bcmath,xml,curl,zip,intl,redis,fpm}"
     
-    # 2. Professional Tuning (RAM 8GB)
+    # 3. Professional Tuning (RAM 8GB)
     execute_step "Tuning MariaDB & PHP-FPM" "
         echo '[mysqld]
         innodb_buffer_pool_size = 2G
@@ -168,13 +181,13 @@ run_installation() {
         sed -i 's/memory_limit = .*/memory_limit = 512M/' /etc/php/8.3/fpm/php.ini
         systemctl restart mariadb php8.3-fpm"
 
-    # 3. DB Creation
+    # 4. DB Creation
     execute_step "Securing Database" "mysql -u root -p'${DB_ROOT_PWD}' -e \"CREATE DATABASE IF NOT EXISTS ${DB_NAME}; CREATE USER IF NOT EXISTS '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}'; GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'127.0.0.1'; FLUSH PRIVILEGES;\""
 
-    # 4. Panel Core
+    # 5. Panel Core
     execute_step "Fetching Panel Source" "mkdir -p $INSTALL_DIR && cd $INSTALL_DIR && curl -Lo panel.tar.gz ${GITHUB_REPO}/releases/latest/download/pterodactyl-addons-panel.tar.gz && tar -xzf panel.tar.gz && chmod -R 755 storage/* bootstrap/cache/"
 
-    # 5. Dependency Management
+    # 6. Dependency Management
     execute_step "Installing Composer" "cd $INSTALL_DIR && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer"
     execute_step "Installing PHP Dependencies" "cd $INSTALL_DIR && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction"
     
@@ -182,14 +195,14 @@ run_installation() {
         php artisan p:environment:setup --author='$ADMIN_EMAIL' --url='https://$FQDN' --timezone='Asia/Jakarta' --cache=redis --session=redis --queue=redis --redis-host=127.0.0.1 --redis-pass= --redis-port=6379 &&
         php artisan p:environment:database --host=127.0.0.1 --port=3306 --database=$DB_NAME --username=$DB_USER --password='$DB_PASS'"
 
-    # 6. Optimized Migration
+    # 7. Optimized Migration
     execute_step "Smart Migration Engine" "cd $INSTALL_DIR && (php artisan migrate --seed --force || (php artisan cache:clear && php artisan migrate --force))"
 
-    # 7. Admin & Assets
+    # 8. Admin & Assets
     execute_step "Creating Admin User" "cd $INSTALL_DIR && php artisan p:user:make --email='$ADMIN_EMAIL' --username='$ADMIN_USER' --name-first='Admin' --name-last='Enterprise' --password='$ADMIN_PASS' --admin=1"
     execute_step "Building Web Assets" "npm install -g yarn && cd $INSTALL_DIR && yarn install --production && yarn build:production"
 
-    # 8. Webserver Logic
+    # 9. Webserver Logic
     execute_step "Configuring Nginx & SSL" "
         curl -o /etc/nginx/sites-available/pterodactyl.conf https://raw.githubusercontent.com/pterodactyl/panel/develop/debian/nginx.conf
         sed -i \"s/<domain>/$FQDN/g\" /etc/nginx/sites-available/pterodactyl.conf
