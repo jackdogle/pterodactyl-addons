@@ -1,13 +1,21 @@
 #!/bin/bash
 
-# ======================================================================================
-#  PTERODACTYL ADDONS PANEL - PROFESSIONAL ENTERPRISE EDITION
-#  Ref Fork: https://github.com/MuLTiAcidi/pterodactyl-addons
-#  Optimized by Gemini for 8GB RAM VPS
-# ======================================================================================
+set -e
 
-# --- KONFIGURASI WARNA & UI ---
-export DEBIAN_FRONTEND=noninteractive
+######################################################################################
+#                                                                                    #
+#  Pterodactyl Addons Panel - Installer                                             #
+#                                                                                    #
+#  This script installs a fully customized Pterodactyl Panel with:                  #
+#  - All game addons (Minecraft, Rust, CS2, FiveM, ARK, GMod, Valheim, 7Days)      #
+#  - All admin addons (Billing, Subdomains, Resource Upgrades, etc.)               #
+#  - Premium themes (Neon Gaming, Eltahost)                                         #
+#                                                                                    #
+#  Made with ❤️ by elta.one (EltaGamingHost) - Given away for FREE!                 #
+#                                                                                    #
+######################################################################################
+
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -15,235 +23,523 @@ BLUE='\033[0;34m'
 PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 WHITE='\033[1;37m'
-BOLD='\033[1m'
-NC='\033[0m'
+NC='\033[0m' # No Color
 
-# --- GLOBAL VARIABLES ---
-LOG_FILE="/var/log/ptero_pro_install.log"
+# Variables
+GITHUB_URL="https://github.com/jackdogle/pterodactyl-addons"
+PANEL_VERSION="1.0.0"
 INSTALL_DIR="/var/www/pterodactyl"
-GITHUB_REPO="https://github.com/jackdogle/pterodactyl-addons"
-VERSION="4.0.0-PRO"
 
-# --- FUNGSI DEBUGGING & LOGGER ---
-exec 3>&1 # Save stdout
-exec 4>&2 # Save stderr
-
-log_init() {
-    echo -e "====================================================" > "$LOG_FILE"
-    echo -e " PTERODACTYL INSTALLER LOG - $VERSION" >> "$LOG_FILE"
-    echo -e " Started: $(date)" >> "$LOG_FILE"
-    echo -e "====================================================" >> "$LOG_FILE"
-}
-
-log_step() {
-    local status=$1
-    local message=$2
-    echo -e "[$(date '+%H:%M:%S')] [$status] $message" >> "$LOG_FILE"
-}
-
-# --- UI COMPONENTS ---
-print_header() {
+# Print banner
+print_banner() {
     clear
-    echo -e "${CYAN}┌──────────────────────────────────────────────────────────────────────────────┐${NC}"
-    echo -e "${CYAN}│${NC}  ${BOLD}${WHITE}🚀 PTERODACTYL ADDONS PANEL PRO INSTALLER${NC}                              ${CYAN}│${NC}"
-    echo -e "${CYAN}│${NC}  ${BLUE}Version: ${VERSION} | Basis: MuLTiAcidi Fork${NC}                             ${CYAN}│${NC}"
-    echo -e "${CYAN}└──────────────────────────────────────────────────────────────────────────────┘${NC}"
-    echo -e ""
+    echo -e "${CYAN}"
+    echo "╔═══════════════════════════════════════════════════════════════════════════════╗"
+    echo "║                                                                               ║"
+    echo "║    ██████╗ ████████╗███████╗██████╗  ██████╗ ██████╗  █████╗  ██████╗████████╗║"
+    echo "║    ██╔══██╗╚══██╔══╝██╔════╝██╔══██╗██╔═══██╗██╔══██╗██╔══██╗██╔════╝╚══██╔══╝║"
+    echo "║    ██████╔╝   ██║   █████╗  ██████╔╝██║   ██║██║  ██║███████║██║        ██║   ║"
+    echo "║    ██╔═══╝    ██║   ██╔══╝  ██╔══██╗██║   ██║██║  ██║██╔══██║██║        ██║   ║"
+    echo "║    ██║        ██║   ███████╗██║  ██║╚██████╔╝██████╔╝██║  ██║╚██████╗   ██║   ║"
+    echo "║    ╚═╝        ╚═╝   ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═╝ ╚═════╝   ╚═╝   ║"
+    echo "║                                                                               ║"
+    echo "║                    🎮 ADDONS PANEL INSTALLER v${PANEL_VERSION} 🎮                        ║"
+    echo "║                                                                               ║"
+    echo "╚═══════════════════════════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+    echo ""
+    echo -e "${WHITE}This installer will set up a complete Pterodactyl Panel with:${NC}"
+    echo -e "${GREEN}  ✓ Game Addons:${NC} Minecraft, Rust, CS2, FiveM, ARK, GMod, Valheim, 7Days"
+    echo -e "${GREEN}  ✓ Admin Addons:${NC} Billing, Subdomains, Resource Upgrades, Audit Log, etc."
+    echo -e "${GREEN}  ✓ Themes:${NC} Neon Gaming, Eltahost Premium"
+    echo ""
 }
 
-show_spinner() {
-    local pid=$1
-    local delay=0.1
-    local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
-    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
-        local temp=${spinstr#?}
-        printf " ${CYAN}%c${NC}  " "$spinstr"
-        local spinstr=$temp${spinstr%"$temp"}
-        sleep $delay
-        printf "\b\b\b\b"
-    done
-    printf "    \b\b\b\b"
-}
-
-# --- ENGINE UTILITY ---
-execute() {
-    local msg=$1
-    local cmd=$2
-    
-    echo -ne "${WHITE} • ${msg}...${NC}"
-    log_step "START" "$msg"
-    
-    # Run command and capture output to log
-    eval "$cmd" >> "$LOG_FILE" 2>&1 &
-    local pid=$!
-    
-    show_spinner $pid
-    wait $pid
-    local exit_code=$?
-
-    if [ $exit_code -eq 0 ]; then
-        echo -e "\r ${GREEN}✔${NC} ${WHITE}${msg}${NC}           "
-        log_step "SUCCESS" "$msg"
-    else
-        echo -e "\r ${RED}✘${NC} ${RED}${msg} (FAILED)${NC}           "
-        log_step "ERROR" "Failed on: $msg | Exit Code: $exit_code"
-        echo -e "\n${BOLD}${RED}CRITICAL ERROR DETECTED!${NC}"
-        echo -e "${YELLOW}Silakan periksa log di: ${WHITE}$LOG_FILE${NC}"
-        echo -e "${YELLOW}Penyebab umum: Koneksi internet atau package lock.${NC}\n"
+# Check if running as root
+check_root() {
+    if [[ $EUID -ne 0 ]]; then
+        echo -e "${RED}Error: This script must be run as root!${NC}"
+        echo "Please run: sudo bash install.sh"
         exit 1
     fi
 }
 
-# --- PRE-INSTALLATION REPAIR ---
-pre_flight_check() {
-    log_init
-    echo -e "${YELLOW}[!] Mempersiapkan Sistem & Memperbaiki Paket Terkunci...${NC}"
-    
-    # Force unlock APT
-    execute "Melepas kunci paket (Apt Lock)" "rm -f /var/lib/dpkg/lock* /var/lib/apt/lists/lock* /var/cache/apt/archives/lock*"
-    execute "Konfigurasi ulang paket tertunda" "dpkg --configure -a"
-    execute "Pembersihan Repository lama" "apt-get clean && apt-get update -y"
-    
-    # Hapus NPM lama yang sering bikin stuck
-    execute "Menghapus NPM/NodeJS lama (Anti-Conflict)" "apt-get remove -y nodejs npm node-npm-package-arg || true"
+# Detect OS
+detect_os() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS=$ID
+        OS_VERSION=$VERSION_ID
+    else
+        echo -e "${RED}Error: Cannot detect operating system!${NC}"
+        exit 1
+    fi
+
+    echo -e "${BLUE}Detected OS:${NC} $OS $OS_VERSION"
+
+    case $OS in
+        ubuntu)
+            if [[ "$OS_VERSION" != "20.04" && "$OS_VERSION" != "22.04" && "$OS_VERSION" != "24.04" ]]; then
+                echo -e "${YELLOW}Warning: Recommended Ubuntu versions are 20.04, 22.04, or 24.04${NC}"
+            fi
+            ;;
+        debian)
+            if [[ "$OS_VERSION" != "11" && "$OS_VERSION" != "12" ]]; then
+                echo -e "${YELLOW}Warning: Recommended Debian versions are 11 or 12${NC}"
+            fi
+            ;;
+        *)
+            echo -e "${RED}Error: Unsupported operating system: $OS${NC}"
+            echo "Supported: Ubuntu 20.04/22.04/24.04, Debian 11/12"
+            exit 1
+            ;;
+    esac
 }
 
-# --- CORE LOGIC (ORIGINAL ADAPTED) ---
-get_configuration() {
-    echo -e "\n${CYAN}📑 KONFIGURASI INSTALASI${NC}"
-    echo -e "${WHITE}------------------------------------------------${NC}"
-    
-    read -p "  Domain Panel (e.g panel.id): " FQDN
-    [[ -z "$FQDN" ]] && echo -e "${RED}Domain wajib diisi!${NC}" && exit 1
-    
-    read -p "  Email Administrator: " ADMIN_EMAIL
-    read -p "  Nama Panel [DOGLE STORE PANEL]: " PANEL_NAME
-    PANEL_NAME=${PANEL_NAME:-"DOGLE STORE PANE"}
-    
-    read -p "  Password Root MariaDB: " DB_ROOT_PASS
-    DB_USER_PASS=$(openssl rand -base64 12)
-    
-    echo -e "\n${GREEN}Konfigurasi disimpan. Memulai proses optimasi...${NC}\n"
+# Get user input
+get_user_input() {
+    echo ""
+    echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${WHITE}                    CONFIGURATION                              ${NC}"
+    echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+
+    # Domain/FQDN
+    echo -e "${YELLOW}Enter your panel domain (e.g., panel.example.com):${NC}"
+    read -p "> " FQDN
+    while [[ -z "$FQDN" ]]; do
+        echo -e "${RED}Domain cannot be empty!${NC}"
+        read -p "> " FQDN
+    done
+
+    # Panel Name
+    echo ""
+    echo -e "${YELLOW}Enter your panel name (e.g., My Game Hosting):${NC}"
+    read -p "> " PANEL_NAME
+    PANEL_NAME=${PANEL_NAME:-"Pterodactyl Panel"}
+
+    # Admin Email
+    echo ""
+    echo -e "${YELLOW}Enter admin email:${NC}"
+    read -p "> " ADMIN_EMAIL
+    while [[ -z "$ADMIN_EMAIL" ]]; do
+        echo -e "${RED}Admin email cannot be empty!${NC}"
+        read -p "> " ADMIN_EMAIL
+    done
+
+    # Admin Username
+    echo ""
+    echo -e "${YELLOW}Enter admin username:${NC}"
+    read -p "> " ADMIN_USER
+    ADMIN_USER=${ADMIN_USER:-"admin"}
+
+    # Admin Password
+    echo ""
+    echo -e "${YELLOW}Enter admin password (min 8 characters):${NC}"
+    read -s -p "> " ADMIN_PASS
+    echo ""
+    while [[ ${#ADMIN_PASS} -lt 8 ]]; do
+        echo -e "${RED}Password must be at least 8 characters!${NC}"
+        read -s -p "> " ADMIN_PASS
+        echo ""
+    done
+
+    # Database Password
+    echo ""
+    echo -e "${YELLOW}Enter MySQL/MariaDB root password:${NC}"
+    read -s -p "> " DB_ROOT_PASS
+    echo ""
+    while [[ -z "$DB_ROOT_PASS" ]]; do
+        echo -e "${RED}Database password cannot be empty!${NC}"
+        read -s -p "> " DB_ROOT_PASS
+        echo ""
+    done
+
+    # Generate random database password for panel
+    DB_PASS=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)
+
+    # SSL
+    echo ""
+    echo -e "${YELLOW}Do you want to configure SSL with Let's Encrypt? (y/n):${NC}"
+    read -p "> " USE_SSL
+    USE_SSL=${USE_SSL:-"y"}
+
+    # Timezone
+    echo ""
+    echo -e "${YELLOW}Enter your timezone (e.g., Europe/London, America/New_York):${NC}"
+    read -p "> " TIMEZONE
+    TIMEZONE=${TIMEZONE:-"Asia/Jakarta"}
+
+    # Confirm
+    echo ""
+    echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${WHITE}                    CONFIRM SETTINGS                           ${NC}"
+    echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "  Domain:         ${GREEN}$FQDN${NC}"
+    echo -e "  Panel Name:     ${GREEN}$PANEL_NAME${NC}"
+    echo -e "  Admin Email:    ${GREEN}$ADMIN_EMAIL${NC}"
+    echo -e "  Admin Username: ${GREEN}$ADMIN_USER${NC}"
+    echo -e "  SSL:            ${GREEN}$USE_SSL${NC}"
+    echo -e "  Timezone:       ${GREEN}$TIMEZONE${NC}"
+    echo ""
+    echo -e "${YELLOW}Is this correct? (y/n):${NC}"
+    read -p "> " CONFIRM
+
+    if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
+        echo -e "${YELLOW}Restarting configuration...${NC}"
+        get_user_input
+    fi
 }
 
-install_core_dependencies() {
-    echo -e "${CYAN}📦 STEP 1: INSTALASI DEPENDENCIES${NC}"
-    
-    execute "Update Sistem & Repositori" "apt-get update -y && apt-get upgrade -y"
-    execute "Install Alat Dasar (Curl, Git, Zip)" "apt-get install -y software-properties-common curl git unzip zip tar psmisc"
-    
-    # PHP Repository
-    execute "Setup PHP Repository (Ondrej)" "add-apt-repository -y ppa:ondrej/php"
-    
-    # MariaDB Repository
-    execute "Setup MariaDB Repository" "curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | sudo bash"
-    
-    # NodeJS & Yarn (Modern Way)
-    execute "Setup NodeSource (Node 20)" "curl -fsSL https://deb.nodesource.com/setup_22.x | bash -"
-    
-    execute "Install Server Stack (Nginx, MariaDB, Redis)" "apt-get update -y && apt-get install -y mariadb-server nginx redis-server nodejs"
-    execute "Install PHP 8.3 & Extensions" "apt-get install -y php8.3 php8.3-{common,cli,gd,mysql,mbstring,bcmath,xml,curl,zip,intl,redis,fpm}"
-    execute "Install Composer Global" "curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer"
-    execute "Install Yarn Global" "npm install --global yarn"
+# Install dependencies
+install_dependencies() {
+    echo ""
+    echo -e "${CYAN}[1/8] Installing dependencies...${NC}"
+
+    apt update -y
+    apt upgrade -y
+
+    # Add PHP repository
+    apt install -y software-properties-common curl apt-transport-https ca-certificates gnupg
+
+    if [[ "$OS" == "ubuntu" ]]; then
+        add-apt-repository -y ppa:ondrej/php
+    elif [[ "$OS" == "debian" ]]; then
+        curl -sSL https://packages.sury.org/php/apt.gpg | gpg --dearmor -o /usr/share/keyrings/sury-php.gpg
+        echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/sury-php.list
+    fi
+
+    # Add MariaDB repository
+    curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
+
+    # Add Node.js repository
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+
+    apt update -y
+
+    # Install packages
+    apt install -y \
+        php8.2 php8.2-fpm php8.2-cli php8.2-common php8.2-gd php8.2-mysql php8.2-mbstring \
+        php8.2-bcmath php8.2-xml php8.2-curl php8.2-zip php8.2-intl php8.2-redis \
+        mariadb-server nginx redis-server nodejs tar unzip git
+
+    # Install Composer
+    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+    # Install Yarn
+    npm install -g yarn
+
+    echo -e "${GREEN}✓ Dependencies installed${NC}"
 }
 
-setup_database_tuning() {
-    echo -e "\n${CYAN}⚙️ STEP 2: TUNING DATABASE (8GB RAM MODE)${NC}"
-    
-    execute "Mengamankan MariaDB" "mysql -e \"ALTER USER 'root'@'localhost' IDENTIFIED BY '$DB_ROOT_PASS'; FLUSH PRIVILEGES;\""
-    
-    execute "Optimasi My.cnf (Buffer Pool 2GB)" "
-        echo '[mysqld]
-        innodb_buffer_pool_size = 2G
-        innodb_flush_log_at_trx_commit = 2
-        innodb_log_file_size = 512M
-        max_connections = 500
-        query_cache_limit = 2M
-        query_cache_size = 64M' > /etc/mysql/mariadb.conf.d/99-pterodactyl.cnf &&
-        systemctl restart mariadb"
-        
-    execute "Membuat Database Panel" "mysql -u root -p'$DB_ROOT_PASS' -e \"CREATE DATABASE IF NOT EXISTS panel; CREATE USER IF NOT EXISTS 'pterodactyl'@'127.0.0.1' IDENTIFIED BY '$DB_USER_PASS'; GRANT ALL PRIVILEGES ON panel.* TO 'pterodactyl'@'127.0.0.1'; FLUSH PRIVILEGES;\""
+# Configure MariaDB
+configure_database() {
+    echo ""
+    echo -e "${CYAN}[2/8] Configuring database...${NC}"
+
+    systemctl start mariadb
+    systemctl enable mariadb
+
+    # Secure MariaDB
+    mysql -u root <<EOF
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_ROOT_PASS}';
+DELETE FROM mysql.user WHERE User='';
+DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+DROP DATABASE IF EXISTS test;
+DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+FLUSH PRIVILEGES;
+EOF
+
+    # Create panel database and user
+    mysql -u root -p"${DB_ROOT_PASS}" <<EOF
+ALTER DATABASE IF NOT EXISTS dogle;
+CREATE USER IF NOT EXISTS 'dogle'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}';
+GRANT ALL PRIVILEGES ON dogle.* TO 'dogle'@'127.0.0.1' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+EOF
+
+    echo -e "${GREEN}✓ Database configured${NC}"
 }
 
-download_and_extract() {
-    echo -e "\n${CYAN}📂 STEP 3: DOWNLOADING PANEL ASSETS${NC}"
-    
-    execute "Menyiapkan Direktori" "mkdir -p $INSTALL_DIR && cd $INSTALL_DIR"
-    execute "Mengunduh Source (MuLTiAcidi Fork)" "cd $INSTALL_DIR && curl -Lo panel.tar.gz ${GITHUB_REPO}/archive/refs/heads/main.tar.gz"
-    execute "Mengekstrak Source Code" "cd $INSTALL_DIR && tar -xzf panel.tar.gz --strip-components=1 && chmod -R 755 storage/* bootstrap/cache/"
+# Download and install panel
+install_panel() {
+    echo ""
+    echo -e "${CYAN}[3/8] Downloading and installing panel...${NC}"
+
+    # Create directory
+    mkdir -p $INSTALL_DIR
+    cd $INSTALL_DIR
+
+    # Download panel
+    echo -e "${BLUE}Downloading panel package...${NC}"
+    curl -Lo panel.tar.gz "${GITHUB_URL}/releases/latest/download/pterodactyl-addons-panel.tar.gz"
+
+    # Extract
+    echo -e "${BLUE}Extracting panel...${NC}"
+    tar -xzf panel.tar.gz
+    rm panel.tar.gz
+
+    # Set permissions
+    chmod -R 755 storage/* bootstrap/cache/
+
+    echo -e "${GREEN}✓ Panel downloaded and extracted${NC}"
 }
 
-configure_environment() {
-    echo -e "\n${CYAN}🔧 STEP 4: KONFIGURASI ENVIRONMENT${NC}"
-    
-    execute "Composer Install (Dependencies)" "cd $INSTALL_DIR && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction"
-    execute "Setup .env file" "cd $INSTALL_DIR && cp .env.example .env && php artisan key:generate --force"
-    
-    execute "Setting App Details" "cd $INSTALL_DIR && 
-        php artisan p:environment:setup --author='$ADMIN_EMAIL' --url='https://$FQDN' --timezone='Asia/Jakarta' --cache=redis --session=redis --queue=redis --redis-host=127.0.0.1 --redis-pass= --redis-port=6379 &&
-        php artisan p:environment:database --host=127.0.0.1 --port=3306 --database=panel --username=pterodactyl --password='$DB_USER_PASS'"
-    
-    execute "Migrasi Database & Seeding" "cd $INSTALL_DIR && php artisan migrate --seed --force"
+# Configure panel
+configure_panel() {
+    echo ""
+    echo -e "${CYAN}[4/8] Configuring panel...${NC}"
+
+    cd $INSTALL_DIR
+
+    # Copy environment file
+    cp .env.example .env
+
+    # Install Composer dependencies
+    echo -e "${BLUE}Installing PHP dependencies...${NC}"
+    COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction
+
+    # Generate app key
+    php artisan key:generate --force
+
+    # Configure environment
+    php artisan p:environment:setup \
+        --author="$ADMIN_EMAIL" \
+        --url="https://$FQDN" \
+        --timezone="$TIMEZONE" \
+        --cache=redis \
+        --session=redis \
+        --queue=redis \
+        --redis-host=127.0.0.1 \
+        --redis-pass= \
+        --redis-port=6379 \
+        --settings-ui=true
+
+    php artisan p:environment:database \
+        --host=127.0.0.1 \
+        --port=3306 \
+        --database=dogle \
+        --username=dogle \
+        --password="$DB_PASS"
+
+    # Update panel name in .env
+    sed -i "s/APP_NAME=.*/APP_NAME=\"$PANEL_NAME\"/" .env
+
+    echo -e "${GREEN}✓ Panel configured${NC}"
 }
 
-build_frontend_assets() {
-    echo -e "\n${CYAN}🎨 STEP 5: BUILDING FRONTEND (MODERN UI)${NC}"
-    
-    execute "Yarn Production Install" "cd $INSTALL_DIR && yarn install --production"
-    execute "Compiling Assets (Yarn Build)" "cd $INSTALL_DIR && yarn build:production"
+# Run migrations and seed
+setup_database_tables() {
+    echo ""
+    echo -e "${CYAN}[5/8] Setting up database tables...${NC}"
+
+    cd $INSTALL_DIR
+
+    # Run migrations
+    php artisan migrate --seed --force
+
+    # Create admin user
+    php artisan p:user:make \
+        --email="$ADMIN_EMAIL" \
+        --username="$ADMIN_USER" \
+        --name-first="dogle" \
+        --name-last="dogle" \
+        --password="$ADMIN_PASS" \
+        --admin=1
+
+    echo -e "${GREEN}✓ Database tables created${NC}"
 }
 
-finalize_system() {
-    echo -e "\n${CYAN}🚀 STEP 6: WEB SERVER & PERMISSIONS${NC}"
-    
-    execute "Set Permissions (www-data)" "chown -R www-data:www-data $INSTALL_DIR/*"
-    
-    execute "Configuring Nginx" "
-        curl -o /etc/nginx/sites-available/pterodactyl.conf https://raw.githubusercontent.com/pterodactyl/panel/develop/debian/nginx.conf &&
-        sed -i 's/<domain>/$FQDN/g' /etc/nginx/sites-available/pterodactyl.conf &&
-        sed -i 's|/var/www/pterodactyl|$INSTALL_DIR|g' /etc/nginx/sites-available/pterodactyl.conf &&
-        sed -i 's/php8.1-fpm.sock/php8.3-fpm.sock/g' /etc/nginx/sites-available/pterodactyl.conf &&
-        ln -sf /etc/nginx/sites-available/pterodactyl.conf /etc/nginx/sites-enabled/pterodactyl.conf &&
-        rm -f /etc/nginx/sites-enabled/default &&
-        systemctl restart nginx"
-        
-    execute "Setup Crontab" "(crontab -l 2>/dev/null; echo \"* * * * * php $INSTALL_DIR/artisan schedule:run >> /dev/null 2>&1\") | crontab -"
-    
-    execute "Setup Queue Worker Service" "
-        printf \"[Unit]\nDescription=Pterodactyl Queue Worker\nAfter=redis-server.service\n\n[Service]\nUser=www-data\nGroup=www-data\nRestart=always\nExecStart=/usr/bin/php $INSTALL_DIR/artisan queue:work --queue=high,standard,low --sleep=3 --tries=3\n\n[Install]\nWantedBy=multi-user.target\" > /etc/systemd/system/pteroq.service &&
-        systemctl daemon-reload && systemctl enable --now pteroq"
+# Build frontend
+build_frontend() {
+    echo ""
+    echo -e "${CYAN}[6/8] Building frontend assets...${NC}"
+
+    cd $INSTALL_DIR
+
+    # Install Node dependencies
+    echo -e "${BLUE}Installing Node.js dependencies...${NC}"
+    yarn install --frozen-lockfile
+
+    # Build
+    echo -e "${BLUE}Building frontend (this may take a few minutes)...${NC}"
+    yarn build:production
+
+    echo -e "${GREEN}✓ Frontend built${NC}"
 }
 
-print_final_report() {
-    clear
-    print_header
-    echo -e "${GREEN}${BOLD}🎉 INSTALASI SELESAI DENGAN OPTIMAL!${NC}"
-    echo -e "${WHITE}------------------------------------------------${NC}"
-    echo -e "${CYAN}🌐 URL PANEL      :${NC} ${WHITE}https://$FQDN${NC}"
-    echo -e "${CYAN}📧 EMAIL ADMIN    :${NC} ${WHITE}$ADMIN_EMAIL${NC}"
-    echo -e "${CYAN}💾 DATABASE USER  :${NC} ${WHITE}pterodactyl${NC}"
-    echo -e "${CYAN}🔑 DATABASE PASS  :${NC} ${WHITE}$DB_USER_PASS${NC}"
-    echo -e "${WHITE}------------------------------------------------${NC}"
-    echo -e "${YELLOW}Catatan: Password Root MariaDB adalah yang Anda masukkan tadi.${NC}"
-    echo -e "${YELLOW}Log instalasi lengkap: ${WHITE}$LOG_FILE${NC}"
-    echo -e "${GREEN}${BOLD}Silakan buka browser dan akses domain Anda!${NC}\n"
+# Configure webserver
+configure_webserver() {
+    echo ""
+    echo -e "${CYAN}[7/8] Configuring webserver...${NC}"
+
+    # Create Nginx config
+    cat > /etc/nginx/sites-available/pterodactyl.conf <<EOF
+server {
+    listen 80;
+    server_name $FQDN;
+
+    root $INSTALL_DIR/public;
+    index index.html index.htm index.php;
+    charset utf-8;
+
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    access_log off;
+    error_log  /var/log/nginx/pterodactyl.app-error.log error;
+
+    # allow larger file uploads and longer script runtimes
+    client_max_body_size 100m;
+    client_body_timeout 120s;
+
+    sendfile off;
+
+    location ~ \.php\$ {
+        fastcgi_split_path_info ^(.+\.php)(/.+)\$;
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param PHP_VALUE "upload_max_filesize = 100M \n post_max_size=100M";
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        fastcgi_param HTTP_PROXY "";
+        fastcgi_intercept_errors off;
+        fastcgi_buffer_size 16k;
+        fastcgi_buffers 4 16k;
+        fastcgi_connect_timeout 300;
+        fastcgi_send_timeout 300;
+        fastcgi_read_timeout 300;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+}
+EOF
+
+    # Enable site
+    ln -sf /etc/nginx/sites-available/pterodactyl.conf /etc/nginx/sites-enabled/
+    rm -f /etc/nginx/sites-enabled/default
+
+    # Test and reload
+    nginx -t
+    systemctl reload nginx
+
+    # Configure SSL if requested
+    if [[ "$USE_SSL" == "y" || "$USE_SSL" == "Y" ]]; then
+        echo -e "${BLUE}Setting up SSL with Let's Encrypt...${NC}"
+        apt install -y certbot python3-certbot-nginx
+        certbot --nginx -d "$FQDN" --non-interactive --agree-tos --email "$ADMIN_EMAIL" --redirect
+    fi
+
+    echo -e "${GREEN}✓ Webserver configured${NC}"
 }
 
-# --- MAIN EXECUTION ---
+# Set permissions and create services
+finalize_installation() {
+    echo ""
+    echo -e "${CYAN}[8/8] Finalizing installation...${NC}"
+
+    cd $INSTALL_DIR
+
+    # Set permissions
+    chown -R www-data:www-data $INSTALL_DIR/*
+
+    # Create queue worker service
+    cat > /etc/systemd/system/pteroq.service <<EOF
+[Unit]
+Description=Pterodactyl Queue Worker
+After=redis-server.service
+
+[Service]
+User=www-data
+Group=www-data
+Restart=always
+ExecStart=/usr/bin/php $INSTALL_DIR/artisan queue:work --queue=high,standard,low --sleep=3 --tries=3
+StartLimitInterval=180
+StartLimitBurst=30
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    # Create cron job
+    (crontab -l 2>/dev/null | grep -v "pterodactyl"; echo "* * * * * php $INSTALL_DIR/artisan schedule:run >> /dev/null 2>&1") | crontab -
+
+    # Enable and start services
+    systemctl daemon-reload
+    systemctl enable --now pteroq
+    systemctl enable --now redis-server
+    systemctl enable --now nginx
+    systemctl enable --now php8.2-fpm
+    systemctl enable --now mariadb
+
+    # Clear caches
+    php artisan config:cache
+    php artisan view:cache
+    php artisan route:cache
+
+    echo -e "${GREEN}✓ Installation finalized${NC}"
+}
+
+# Print completion message
+print_complete() {
+    echo ""
+    echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${GREEN}           INSTALLATION COMPLETE! 🎉                           ${NC}"
+    echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "  ${WHITE}Panel URL:${NC}        ${CYAN}https://$FQDN${NC}"
+    echo -e "  ${WHITE}Admin Email:${NC}      ${CYAN}$ADMIN_EMAIL${NC}"
+    echo -e "  ${WHITE}Admin Username:${NC}   ${CYAN}$ADMIN_USER${NC}"
+    echo ""
+    echo -e "${YELLOW}Database Credentials (save these!):${NC}"
+    echo -e "  ${WHITE}Database:${NC}         ${CYAN}panel${NC}"
+    echo -e "  ${WHITE}Username:${NC}         ${CYAN}pterodactyl${NC}"
+    echo -e "  ${WHITE}Password:${NC}         ${CYAN}$DB_PASS${NC}"
+    echo ""
+    echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${WHITE}Included Features:${NC}"
+    echo -e "  ${GREEN}✓${NC} Minecraft Addons (Mods, Plugins, Versions, Modpacks)"
+    echo -e "  ${GREEN}✓${NC} Rust Addons (uMod Plugins, RCON, Maps, Wipe Manager)"
+    echo -e "  ${GREEN}✓${NC} CS2 Addons (Plugins, RCON, Maps, Workshop)"
+    echo -e "  ${GREEN}✓${NC} FiveM Addons (Resources, Config, Players)"
+    echo -e "  ${GREEN}✓${NC} ARK Addons (Mods, Config, Cluster Manager)"
+    echo -e "  ${GREEN}✓${NC} GMod Addons (Addons, RCON, Players)"
+    echo -e "  ${GREEN}✓${NC} Valheim Addons (Mods, Worlds, Config)"
+    echo -e "  ${GREEN}✓${NC} 7 Days to Die Addons (Mods, Config)"
+    echo -e "  ${GREEN}✓${NC} Admin: Billing, Subdomains, Resource Upgrades"
+    echo -e "  ${GREEN}✓${NC} Themes: Neon Gaming, Eltahost Premium"
+    echo ""
+    echo -e "${PURPLE}Thank you for using Pterodactyl Addons Panel!${NC}"
+    echo -e "${PURPLE}Made with ❤️ by elta.one (EltaGamingHost)${NC}"
+    echo -e "${PURPLE}Given away for FREE - Enjoy!${NC}"
+    echo ""
+}
+
+# Main function
 main() {
-    check_root() { [[ $EUID -ne 0 ]] && echo "Run as root!" && exit 1; }
+    print_banner
     check_root
-    
-    print_header
-    get_configuration
-    pre_flight_check
-    install_core_dependencies
-    setup_database_tuning
-    download_and_extract
-    configure_environment
-    build_frontend_assets
-    finalize_system
-    print_final_report
+    detect_os
+    get_user_input
+    install_dependencies
+    configure_database
+    install_panel
+    configure_panel
+    setup_database_tables
+    build_frontend
+    configure_webserver
+    finalize_installation
+    print_complete
 }
 
+# Run
 main
