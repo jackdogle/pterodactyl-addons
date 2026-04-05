@@ -1,12 +1,17 @@
 #!/bin/bash
 
 # ======================================================================================
-#  PTERODACTYL ADDONS PANEL - ULTRA INSTALLER V3.2.1 (FIX BROKEN PACKAGES)
-#  Optimized for: 8GB RAM VPS
-#  Feature: Anti-Stuck, Advanced Logging, Self-Healing, High-Performance Tuning
+#  PTERODACTYL ADDONS PANEL - ENTERPRISE INSTALLER V4.0.0
+#  Ref Fork: https://github.com/MuLTiAcidi/pterodactyl-addons
+#  Feature: Advanced Terminal UI | 8GB RAM Optimized | Anti-Stuck | Deep Debugging
 # ======================================================================================
 
-# Setup Warna & UI
+# Memaksa APT agar tidak interaktif (Anti-Stuck pada prompt package)
+export DEBIAN_FRONTEND=noninteractive
+
+# ==========================================
+# 1. SETUP UI, WARNA, DAN VARIABEL
+# ==========================================
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -15,224 +20,312 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 WHITE='\033[1;37m'
 BOLD='\033[1m'
+DIM='\033[2m'
 NC='\033[0m'
 
-# Versi & Log
-VERSION="3.2.1-PRO"
-LOG_FILE="/var/log/ptero_install.log"
+VERSION="4.0.0-ENTERPRISE"
+LOG_FILE="/var/log/ptero_install_v4.log"
 INSTALL_DIR="/var/www/pterodactyl"
-GITHUB_REPO="https://github.com/jackdogle/pterodactyl-addons"
+GITHUB_URL="https://github.com/jackdogle/pterodactyl-addons"
+CURRENT_STEP=0
+TOTAL_STEPS=22
 
-# Inisialisasi Log dengan Header
-echo "====================================================" > $LOG_FILE
-echo " PTERODACTYL INSTALLER LOG - $VERSION" >> $LOG_FILE
-echo " Tanggal: $(date)" >> $LOG_FILE
-echo " OS: $(lsb_release -d | cut -f2)" >> $LOG_FILE
-echo "====================================================" >> $LOG_FILE
+# Inisialisasi File Log Professional
+cat <<EOF > "$LOG_FILE"
+======================================================================
+ PTERODACTYL ENTERPRISE INSTALLER LOG
+ Versi   : $VERSION
+ Tanggal : $(date '+%Y-%m-%d %H:%M:%S')
+ Sistem  : $(uname -a)
+ Source  : $GITHUB_URL
+======================================================================
+EOF
 
-# Fungsi Animasi Loading (Spinner)
-spinner() {
-    local pid=$1
-    local delay=0.1
-    local spinstr='|/-\'
-    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
-        local temp=${spinstr#?}
-        printf " [%c]  " "$spinstr"
-        local spinstr=$temp${spinstr%"$temp"}
-        sleep $delay
-        printf "\b\b\b\b\b\b"
-    done
-    printf "    \b\b\b\b"
-}
+# ==========================================
+# 2. UI ENGINE & PROFESSIONAL DEBUGGING
+# ==========================================
 
-# Header Banner Modern
 print_banner() {
     clear
-    echo -e "${CYAN}┌────────────────────────────────────────────────────────────┐${NC}"
-    echo -e "${CYAN}│${NC}  ${BOLD}${WHITE}PTERODACTYL ADDONS INSTALLER${NC} ${CYAN}v${VERSION}${NC}           ${CYAN}│${NC}"
-    echo -e "${CYAN}│${NC}  ${BLUE}Professional Enterprise Debugging & Anti-Stuck${NC}         ${CYAN}│${NC}"
-    echo -e "${CYAN}│${NC}  ${PURPLE}Optimized for 8GB RAM High-Performance VPS${NC}             ${CYAN}│${NC}"
-    echo -e "└────────────────────────────────────────────────────────────┘${NC}"
+    echo -e "${CYAN}╭────────────────────────────────────────────────────────────────────────╮${NC}"
+    echo -e "${CYAN}│${NC} ${BOLD}${WHITE} PTERODACTYL ADDONS PANEL - ADVANCED INSTALLER ${NC}                     ${CYAN}│${NC}"
+    echo -e "${CYAN}│${NC} ${DIM} Versi: $VERSION | Base: MuLTiAcidi Fork${NC}                          ${CYAN}│${NC}"
+    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────────┤${NC}"
+    echo -e "${CYAN}│${NC} ${GREEN}✔ Anti-Stuck Engine${NC}   ${YELLOW}✔ 8GB RAM Optimized${NC}   ${PURPLE}✔ Professional Debugging${NC} ${CYAN}│${NC}"
+    echo -e "${CYAN}╰────────────────────────────────────────────────────────────────────────╯${NC}\n"
+}
+
+# Advanced Spinner dengan Step Counter
+spinner() {
+    local pid=$1
+    local msg=$2
+    local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    local temp
+    
+    while kill -0 $pid 2>/dev/null; do
+        temp=${spinstr#?}
+        printf "\r${CYAN} [%c]${NC} ${WHITE}%s${NC}..." "$spinstr" "$msg"
+        local spinstr=$temp${spinstr%"$temp"}
+        sleep 0.1
+    done
+}
+
+# Eksekutor Anti-Stuck dengan Advanced Error Handling
+run_step() {
+    local msg=$1
+    local cmd=$2
+    ((CURRENT_STEP++))
+    
+    # Logging
+    echo -e "\n[$(date '+%H:%M:%S')] [STEP $CURRENT_STEP/$TOTAL_STEPS] $msg" >> "$LOG_FILE"
+    echo -e "COMMAND: $cmd" >> "$LOG_FILE"
+    echo "----------------------------------------" >> "$LOG_FILE"
+    
+    # Menampilkan UI
+    printf "\r${CYAN} [⏳]${NC} ${WHITE}%s${NC}..." "$msg"
+    
+    # Eksekusi command di background menggunakan bash subshell
+    bash -c "$cmd" >> "$LOG_FILE" 2>&1 &
+    local pid=$!
+    
+    spinner $pid "$msg"
+    wait $pid
+    local exit_code=$?
+
+    if [ $exit_code -eq 0 ]; then
+        printf "\r${GREEN} [✔]${NC} ${WHITE}%-50s${NC} ${GREEN}[OK]${NC}\n" "$msg"
+    else
+        printf "\r${RED} [✖]${NC} ${WHITE}%-50s${NC} ${RED}[FAILED]${NC}\n" "$msg"
+        echo -e "\n${RED}╭─────────────────── CRITICAL ERROR DETECTED ───────────────────╮${NC}"
+        echo -e "${RED}│${NC} ${WHITE}Gagal saat mengeksekusi:${NC} $msg"
+        echo -e "${RED}│${NC} ${WHITE}Exit Code:${NC} $exit_code"
+        echo -e "${RED}│${NC} ${WHITE}Log Lengkap:${NC} ${YELLOW}$LOG_FILE${NC}"
+        echo -e "${RED}├──────────────────── DEBUGGING OUTPUT (Tail) ──────────────────┤${NC}"
+        tail -n 20 "$LOG_FILE" | while read -r line; do echo -e "${RED}│${NC} ${DIM}$line${NC}"; done
+        echo -e "${RED}╰───────────────────────────────────────────────────────────────╯${NC}"
+        exit 1
+    fi
+}
+
+# ==========================================
+# 3. PRE-FLIGHT CHECKS & AUTO HEALING
+# ==========================================
+
+check_env() {
+    if [[ $EUID -ne 0 ]]; then
+        echo -e "${RED}[!] Akses Ditolak: Skrip ini wajib dijalankan sebagai ROOT!${NC}"
+        exit 1
+    fi
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS=$ID
+        OS_VERSION=$VERSION_ID
+    else
+        echo -e "${RED}[!] Error: OS tidak didukung!${NC}"
+        exit 1
+    fi
+}
+
+auto_repair_system() {
+    echo -e "${YELLOW}>> Menjalankan Self-Healing & System Cleanup...${NC}"
+    run_step "Menghentikan layanan yang memblokir" "systemctl stop unattended-upgrades 2>/dev/null || true; fuser -k 80/tcp 2>/dev/null || true; fuser -k 443/tcp 2>/dev/null || true"
+    run_step "Membersihkan APT Lock Files" "rm -f /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock"
+    run_step "Purge NodeJS/NPM Lama (Anti-Conflict)" "apt-get remove -y --purge nodejs npm libnode* node-* 2>/dev/null || true; apt-get autoremove -y"
+    run_step "Fixing Broken APT Dependencies" "dpkg --configure -a && apt-get --fix-broken install -y"
     echo ""
 }
 
-# Fungsi Logging Profesional
-log_event() {
-    local status=$1
-    local message=$2
-    echo "[$(date '+%H:%M:%S')] [$status] $message" >> $LOG_FILE
+get_user_input() {
+    echo -e "${BOLD}${CYAN}╭── KONFIGURASI PANEL ──────────────────────────────────────────╮${NC}"
+    
+    read -p " │ Domain Panel (FQDN)    : " FQDN
+    while [[ -z "$FQDN" ]]; do read -p " │ Domain tidak boleh kosong: " FQDN; done
+
+    read -p " │ Nama Panel             : " PANEL_NAME
+    PANEL_NAME=${PANEL_NAME:-"Ptero Addons"}
+
+    read -p " │ Email Administrator    : " ADMIN_EMAIL
+    while [[ -z "$ADMIN_EMAIL" ]]; do read -p " │ Email tidak boleh kosong: " ADMIN_EMAIL; done
+
+    read -p " │ Username Admin         : " ADMIN_USER
+    read -s -p " │ Password Admin         : " ADMIN_PASS; echo ""
+    read -s -p " │ Database Root Password : " DB_ROOT_PASS; echo ""
+    
+    DB_PASS=$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9' | head -c 18)
+    
+    read -p " │ Auto-Setup SSL? (y/n)  : " USE_SSL
+    USE_SSL=${USE_SSL:-"y"}
+
+    read -p " │ Timezone [Asia/Jakarta]: " TIMEZONE
+    TIMEZONE=${TIMEZONE:-"Asia/Jakarta"}
+
+    echo -e "${CYAN}╰───────────────────────────────────────────────────────────────╯${NC}\n"
+    
+    echo -e "${YELLOW}[!] Memulai Instalasi Automatis... Dilarang menutup terminal!${NC}\n"
 }
 
-# Diagnosa & Perbaikan Otomatis Mendalam (FIX Broken Packages)
-auto_repair_conflicts() {
-    echo -e "${YELLOW}[!] Menjalankan Diagnosa Sistem & Deep Repair...${NC}"
-    log_event "INFO" "Memulai tahap diagnosa mendalam."
+# ==========================================
+# 4. INSTALASI DEPENDENCIES
+# ==========================================
 
-    # 1. Perbaikan APT & Lock Files
-    log_event "REPAIR" "Membersihkan lock files dan konfigurasi dpkg."
-    systemctl stop unattended-upgrades > /dev/null 2>&1
-    rm -f /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock > /dev/null 2>&1
-    
-    # 2. Force Fix Broken Packages (PENTING)
-    log_event "REPAIR" "Memaksa perbaikan broken packages dan held packages."
-    apt-mark unhold nodejs npm > /dev/null 2>&1
-    dpkg --configure -a >> $LOG_FILE 2>&1
-    apt-get install -f -y >> $LOG_FILE 2>&1
-    apt-get autoremove -y >> $LOG_FILE 2>&1
-    apt-get clean >> $LOG_FILE 2>&1
+install_dependencies() {
+    run_step "Update System Repository" "apt-get update -y && apt-get upgrade -y"
+    run_step "Install Basic Utilities" "apt-get install -y software-properties-common curl apt-transport-https ca-certificates gnupg lsb-release git unzip tar psmisc"
 
-    # 3. Pembersihan Port Bentrok
-    log_event "REPAIR" "Memeriksa port 80 dan 443."
-    for port in 80 443; do
-        if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null ; then
-            echo -e "${PURPLE}[*] Port $port terdeteksi sibuk. Membersihkan...${NC}"
-            fuser -k $port/tcp >> $LOG_FILE 2>&1
-        fi
-    done
-
-    # 4. Validasi Koneksi Internet
-    if ! ping -c 1 google.com > /dev/null 2>&1; then
-        echo -e "${RED}[!] Gagal: Tidak ada koneksi internet.${NC}"
-        log_event "FATAL" "Koneksi internet terputus."
-        exit 1
-    fi
-    
-    echo -e "${GREEN}[V] Sistem siap untuk proses upgrade.${NC}"
-}
-
-# Cek Izin & Lingkungan
-check_env() {
-    [[ $EUID -ne 0 ]] && echo -e "${RED}[!] Jalankan sebagai ROOT!${NC}" && exit 1
-    if [ -f /etc/os-release ]; then . /etc/os-release; OS=$ID; else exit 1; fi
-    log_event "INFO" "Instalasi dimulai pada OS: $OS"
-}
-
-# Input Konfigurasi
-get_config() {
-    echo -e "${BOLD}${CYAN}>> KONFIGURASI INSTALASI${NC}"
-    read -p "   Domain Panel (FQDN) : " FQDN
-    read -p "   Email Admin         : " ADMIN_EMAIL
-    read -p "   Username Admin      : " ADMIN_USER
-    read -s -p "   Password Admin      : " ADMIN_PASS; echo ""
-    read -s -p "   MariaDB Root Pass   : " DB_ROOT_PWD; echo ""
-    
-    DB_NAME="panel"
-    DB_USER="ptero_user"
-    DB_PASS=$(openssl rand -base64 14 | tr -dc 'a-zA-Z0-9' | head -c 16)
-    log_event "CONFIG" "Domain: $FQDN | Email: $ADMIN_EMAIL"
-}
-
-# Eksekusi Langkah dengan Professional Debugging
-execute_step() {
-    local msg=$1
-    local cmd=$2
-    log_event "EXEC" "Menjalankan: $msg"
-    
-    echo -ne "${BLUE}[TASK] $msg...${NC}"
-    
-    # Eksekusi dengan Timeout (Anti-Stuck)
-    eval "$cmd" >> $LOG_FILE 2>&1 &
-    local pid=$!
-    spinner $pid
-    wait $pid
-    local res=$?
-
-    if [ $res -eq 0 ]; then
-        echo -e "\r${GREEN}[DONE] $msg                                ${NC}"
-        log_event "SUCCESS" "Berhasil: $msg"
-    else
-        echo -e "\r${RED}[FAIL] $msg                                ${NC}"
-        log_event "ERROR" "Gagal pada step: $msg (Exit Code: $res)"
-        echo -e "${YELLOW}------------------------------------------------------------${NC}"
-        echo -e "${BOLD}${RED}DEBUGGING INFO:${NC}"
-        echo -e "Periksa baris terakhir log di ${CYAN}$LOG_FILE${NC}:"
-        tail -n 15 $LOG_FILE
-        echo -e "${YELLOW}------------------------------------------------------------${NC}"
-        exit 1
-    fi
-}
-
-# Core Installation
-run_installation() {
-    # 1. System Prep & NodeSource Fix
-    execute_step "Updating Repositories" "apt-get update && apt-get install -y software-properties-common curl git psmisc lsof unzip ca-certificates"
-    
     if [[ "$OS" == "ubuntu" ]]; then
-        execute_step "Setting up PHP & Node Repositories" "
-            add-apt-repository -y ppa:ondrej/php && 
-            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -"
+        run_step "Menambahkan PPA PHP Ondrej" "LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php"
+    elif [[ "$OS" == "debian" ]]; then
+        run_step "Menambahkan Repo PHP Sury" "curl -sSL https://packages.sury.org/php/apt.gpg | gpg --dearmor --yes -o /usr/share/keyrings/sury-php.gpg && echo 'deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main' > /etc/apt/sources.list.d/sury-php.list"
     fi
+
+    run_step "Setup MariaDB Repository" "curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash"
+    run_step "Setup NodeSource (Node.js 20)" "curl -fsSL https://deb.nodesource.com/setup_22.x | bash -"
     
-    # 2. Forced Installation of Stack (Paling sering stuck di sini)
-    # Kita pisah nodejs untuk memastikan npm tidak bentrok
-    execute_step "Installing MariaDB & Nginx" "apt-get install -y mariadb-server nginx redis-server"
-    execute_step "Installing Nodejs (Nodesource)" "apt-get install -y nodejs"
-    execute_step "Installing PHP 8.3 & Extensions" "apt-get install -y php8.3 php8.3-{common,cli,gd,mysql,mbstring,bcmath,xml,curl,zip,intl,redis,fpm}"
+    run_step "Install Nginx, MariaDB, Redis" "apt-get update -y && apt-get install -y mariadb-server nginx redis-server"
+    run_step "Install Node.js & Yarn" "apt-get install -y nodejs && npm install -g yarn"
     
-    # 3. Professional Tuning (RAM 8GB)
-    execute_step "Tuning MariaDB & PHP-FPM" "
+    run_step "Install PHP 8.3 & Extensions" "apt-get install -y php8.3 php8.3-{common,cli,gd,mysql,mbstring,bcmath,xml,curl,zip,intl,redis,fpm}"
+    run_step "Install Composer (Global)" "curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer"
+}
+
+# ==========================================
+# 5. TUNING & CONFIGURATION
+# ==========================================
+
+configure_database() {
+    run_step "Tuning MariaDB (8GB RAM Mode)" "
         echo '[mysqld]
-        innodb_buffer_pool_size = 2G
-        innodb_log_file_size = 512M
-        innodb_flush_method = O_DIRECT
-        max_connections = 500
-        query_cache_type = 1
-        query_cache_size = 64M' > /etc/mysql/mariadb.conf.d/99-ptero-optimized.cnf
+innodb_buffer_pool_size = 2G
+innodb_log_file_size = 512M
+innodb_flush_method = O_DIRECT
+max_connections = 500
+query_cache_type = 1
+query_cache_size = 64M' > /etc/mysql/mariadb.conf.d/99-ptero-optimized.cnf
+        systemctl restart mariadb"
+
+    run_step "Setup Pterodactyl Database" "mysql -u root -p'${DB_ROOT_PASS}' -e \"CREATE DATABASE IF NOT EXISTS panel; CREATE USER IF NOT EXISTS 'pterodactyl'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}'; GRANT ALL PRIVILEGES ON panel.* TO 'pterodactyl'@'127.0.0.1' WITH GRANT OPTION; FLUSH PRIVILEGES;\""
+}
+
+install_panel() {
+    run_step "Download MuLTiAcidi Pterodactyl Fork" "
+        mkdir -p $INSTALL_DIR && cd $INSTALL_DIR &&
+        curl -Lo panel.tar.gz ${GITHUB_URL}/releases/latest/download/pterodactyl-addons-panel.tar.gz || curl -Lo panel.tar.gz ${GITHUB_URL}/archive/refs/heads/main.tar.gz &&
+        tar -xzf panel.tar.gz --strip-components=1 -C $INSTALL_DIR || tar -xzf panel.tar.gz &&
+        chmod -R 755 storage/* bootstrap/cache/"
+}
+
+configure_panel() {
+    run_step "Composer Install Dependencies" "cd $INSTALL_DIR && cp -n .env.example .env && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction"
+    
+    run_step "Setup Laravel Environment & App Key" "cd $INSTALL_DIR && 
+        php artisan key:generate --force &&
+        php artisan p:environment:setup --author='$ADMIN_EMAIL' --url='https://$FQDN' --timezone='$TIMEZONE' --cache=redis --session=redis --queue=redis --redis-host=127.0.0.1 --redis-pass= --redis-port=6379 &&
+        php artisan p:environment:database --host=127.0.0.1 --port=3306 --database=panel --username=pterodactyl --password='$DB_PASS' &&
+        sed -i 's/APP_NAME=.*/APP_NAME=\"$PANEL_NAME\"/' .env"
+}
+
+setup_database_tables() {
+    run_step "Smart Migration & Seeding" "cd $INSTALL_DIR && php artisan migrate --seed --force || (php artisan cache:clear && php artisan migrate --force)"
+    run_step "Membuat Akun Administrator" "cd $INSTALL_DIR && php artisan p:user:make --email='$ADMIN_EMAIL' --username='$ADMIN_USER' --name-first='Admin' --name-last='Enterprise' --password='$ADMIN_PASS' --admin=1"
+}
+
+build_frontend() {
+    run_step "Yarn Install Dependencies" "cd $INSTALL_DIR && yarn install --frozen-lockfile --production=false"
+    run_step "Yarn Build Production (Proses Lama)" "cd $INSTALL_DIR && yarn build:production"
+}
+
+configure_webserver() {
+    run_step "Tuning PHP-FPM (8GB RAM Mode)" "
         sed -i 's/memory_limit = .*/memory_limit = 512M/' /etc/php/8.3/fpm/php.ini
-        systemctl restart mariadb php8.3-fpm"
+        sed -i 's/upload_max_filesize = .*/upload_max_filesize = 100M/' /etc/php/8.3/fpm/php.ini
+        sed -i 's/post_max_size = .*/post_max_size = 100M/' /etc/php/8.3/fpm/php.ini
+        systemctl restart php8.3-fpm"
 
-    # 4. DB Creation
-    execute_step "Securing Database" "mysql -u root -p'${DB_ROOT_PWD}' -e \"CREATE DATABASE IF NOT EXISTS ${DB_NAME}; CREATE USER IF NOT EXISTS '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}'; GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'127.0.0.1'; FLUSH PRIVILEGES;\""
-
-    # 5. Panel Core
-    execute_step "Fetching Panel Source" "mkdir -p $INSTALL_DIR && cd $INSTALL_DIR && curl -Lo panel.tar.gz ${GITHUB_REPO}/releases/latest/download/pterodactyl-addons-panel.tar.gz && tar -xzf panel.tar.gz && chmod -R 755 storage/* bootstrap/cache/"
-
-    # 6. Dependency Management
-    execute_step "Installing Composer" "cd $INSTALL_DIR && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer"
-    execute_step "Installing PHP Dependencies" "cd $INSTALL_DIR && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction"
-    
-    execute_step "Setting Environment" "cd $INSTALL_DIR && cp -n .env.example .env && php artisan key:generate --force && 
-        php artisan p:environment:setup --author='$ADMIN_EMAIL' --url='https://$FQDN' --timezone='Asia/Jakarta' --cache=redis --session=redis --queue=redis --redis-host=127.0.0.1 --redis-pass= --redis-port=6379 &&
-        php artisan p:environment:database --host=127.0.0.1 --port=3306 --database=$DB_NAME --username=$DB_USER --password='$DB_PASS'"
-
-    # 7. Optimized Migration
-    execute_step "Smart Migration Engine" "cd $INSTALL_DIR && (php artisan migrate --seed --force || (php artisan cache:clear && php artisan migrate --force))"
-
-    # 8. Admin & Assets
-    execute_step "Creating Admin User" "cd $INSTALL_DIR && php artisan p:user:make --email='$ADMIN_EMAIL' --username='$ADMIN_USER' --name-first='Admin' --name-last='Enterprise' --password='$ADMIN_PASS' --admin=1"
-    execute_step "Building Web Assets" "npm install -g yarn && cd $INSTALL_DIR && yarn install --production && yarn build:production"
-
-    # 9. Webserver Logic
-    execute_step "Configuring Nginx & SSL" "
-        curl -o /etc/nginx/sites-available/pterodactyl.conf https://raw.githubusercontent.com/pterodactyl/panel/develop/debian/nginx.conf
-        sed -i \"s/<domain>/$FQDN/g\" /etc/nginx/sites-available/pterodactyl.conf
-        sed -i \"s|/var/www/pterodactyl|$INSTALL_DIR|g\" /etc/nginx/sites-available/pterodactyl.conf
-        ln -sf /etc/nginx/sites-available/pterodactyl.conf /etc/nginx/sites-enabled/pterodactyl.conf
-        rm -f /etc/nginx/sites-enabled/default
+    run_step "Setup Nginx VirtualHost" "
+        curl -o /etc/nginx/sites-available/pterodactyl.conf https://raw.githubusercontent.com/pterodactyl/panel/develop/debian/nginx.conf &&
+        sed -i \"s/<domain>/$FQDN/g\" /etc/nginx/sites-available/pterodactyl.conf &&
+        sed -i \"s|/var/www/pterodactyl|$INSTALL_DIR|g\" /etc/nginx/sites-available/pterodactyl.conf &&
+        sed -i 's/php8.1-fpm.sock/php8.3-fpm.sock/g' /etc/nginx/sites-available/pterodactyl.conf &&
+        ln -sf /etc/nginx/sites-available/pterodactyl.conf /etc/nginx/sites-enabled/pterodactyl.conf &&
+        rm -f /etc/nginx/sites-enabled/default &&
         systemctl restart nginx"
+
+    if [[ "$USE_SSL" == "y" || "$USE_SSL" == "Y" ]]; then
+        run_step "Instalasi & Registrasi SSL (Certbot)" "apt-get install -y certbot python3-certbot-nginx && certbot --nginx -d \"$FQDN\" --non-interactive --agree-tos --email \"$ADMIN_EMAIL\" --redirect"
+    fi
 }
 
-# Finalisasi & Info Sukses
-finalize() {
-    execute_step "Setting Folder Ownership" "chown -R www-data:www-data $INSTALL_DIR/* && php artisan config:clear"
+finalize_installation() {
+    run_step "Set Ownership (www-data)" "chown -R www-data:www-data $INSTALL_DIR/*"
     
-    log_event "FINISH" "Instalasi selesai dengan status sukses."
-    
-    echo -e "\n${BOLD}${GREEN}====================================================${NC}"
-    echo -e "   ${BOLD}${WHITE}UPGRADE & INSTALASI SUKSES - V${VERSION}${NC}"
-    echo -e "${BOLD}${GREEN}====================================================${NC}"
-    echo -e "   URL Panel      : ${CYAN}https://$FQDN${NC}"
-    echo -e "   Admin Username : ${CYAN}$ADMIN_USER${NC}"
-    echo -e "   Debug Log      : ${PURPLE}$LOG_FILE${NC}"
-    echo -e "   RAM Optimization: ${GREEN}Enterprise 8GB Mode Active${NC}"
-    echo -e "${BOLD}${GREEN}====================================================${NC}\n"
-    echo -e "${YELLOW}Tips: Jika terjadi masalah, jalankan 'tail -f $LOG_FILE'${NC}"
+    run_step "Setup Pterodactyl Queue Worker" "
+        cat > /etc/systemd/system/pteroq.service <<EOF
+[Unit]
+Description=Pterodactyl Queue Worker
+After=redis-server.service
+
+[Service]
+User=www-data
+Group=www-data
+Restart=always
+ExecStart=/usr/bin/php $INSTALL_DIR/artisan queue:work --queue=high,standard,low --sleep=3 --tries=3
+StartLimitInterval=180
+StartLimitBurst=30
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+EOF
+        systemctl daemon-reload && systemctl enable --now pteroq"
+
+    run_step "Setup Cronjob Otomatis" "
+        crontab -l | grep -v 'pterodactyl' | crontab - &&
+        (crontab -l 2>/dev/null; echo \"* * * * * php $INSTALL_DIR/artisan schedule:run >> /dev/null 2>&1\") | crontab -"
+
+    run_step "Optimalisasi System Caches" "cd $INSTALL_DIR && php artisan config:cache && php artisan view:cache && php artisan route:cache"
 }
 
-# Main Script Execution
-check_env
-print_banner
-auto_repair_conflicts
-get_config
-run_installation
-finalize
+# ==========================================
+# 6. PENUTUPAN & INFORMASI
+# ==========================================
+
+print_complete() {
+    echo -e "\n${CYAN}╭────────────────────────────────────────────────────────────────────────╮${NC}"
+    echo -e "${CYAN}│${NC} ${BOLD}${GREEN}✔ INSTALASI PTERODACTYL ADDONS SUKSES - V${VERSION}${NC}                ${CYAN}│${NC}"
+    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────────┤${NC}"
+    echo -e "${CYAN}│${NC} ${WHITE}🔗 URL Panel      :${NC} ${CYAN}https://$FQDN${NC}"
+    echo -e "${CYAN}│${NC} ${WHITE}👤 Admin Username :${NC} ${CYAN}$ADMIN_USER${NC}"
+    echo -e "${CYAN}│${NC} ${WHITE}🔑 Admin Password :${NC} ${DIM}(Tersimpan rahasia)${NC}"
+    echo -e "${CYAN}├────────────────────────────────────────────────────────────────────────┤${NC}"
+    echo -e "${CYAN}│${NC} ${YELLOW}⚙️ INFORMASI INTERNAL DATABASE (SIMPAN DENGAN BAIK!)${NC}"
+    echo -e "${CYAN}│${NC} ${WHITE}Database Name     :${NC} ${GREEN}panel${NC}"
+    echo -e "${CYAN}│${NC} ${WHITE}Database User     :${NC} ${GREEN}pterodactyl${NC}"
+    echo -e "${CYAN}│${NC} ${WHITE}Database Pass     :${NC} ${GREEN}$DB_PASS${NC}"
+    echo -e "${CYAN}│${NC} ${WHITE}Debug Log File    :${NC} ${PURPLE}$LOG_FILE${NC}"
+    echo -e "${CYAN}╰────────────────────────────────────────────────────────────────────────╯${NC}\n"
+    echo -e "${GREEN}Panel Anda sekarang berjalan dengan konfigurasi maksimal untuk VPS 8GB!${NC}\n"
+}
+
+# ==========================================
+# 7. MAIN EKSEKUSI
+# ==========================================
+main() {
+    print_banner
+    check_env
+    auto_repair_system
+    get_user_input
+    
+    install_dependencies
+    configure_database
+    install_panel
+    configure_panel
+    setup_database_tables
+    build_frontend
+    configure_webserver
+    finalize_installation
+    
+    print_complete
+}
+
+# Mulai instalasi
+main
