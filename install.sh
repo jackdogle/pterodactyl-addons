@@ -214,7 +214,7 @@ install_dependencies() {
     curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash
 
     # Add Node.js repository
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 
     apt update -y
 
@@ -500,8 +500,8 @@ print_complete() {
     echo -e "  ${WHITE}Admin Username:${NC}   ${CYAN}$ADMIN_USER${NC}"
     echo ""
     echo -e "${YELLOW}Database Credentials (save these!):${NC}"
-    echo -e "  ${WHITE}Database:${NC}         ${CYAN}panel${NC}"
-    echo -e "  ${WHITE}Username:${NC}         ${CYAN}pterodactyl${NC}"
+    echo -e "  ${WHITE}Database:${NC}         ${CYAN}dogle${NC}"
+    echo -e "  ${WHITE}Username:${NC}         ${CYAN}dogle${NC}"
     echo -e "  ${WHITE}Password:${NC}         ${CYAN}$DB_PASS${NC}"
     echo ""
     echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
